@@ -6,6 +6,9 @@ products:
   - id: gxrtu5vljdthtd3g
     manufacturer: dé
     model: GD portable charger
+  - id: dbyqsgkpjt8n3puv
+    manufacturer: Platinet
+    model: EV charger
 entities:
   - entity: sensor
     translation_key: status
@@ -52,6 +55,24 @@ entities:
         type: integer
         optional: true
         name: product_variant
+      - id: 108
+        type: integer
+        optional: true
+        name: countdown
+      - id: 111
+        type: string
+        optional: true
+        name: current_limit
+  - entity: sensor
+    class: signal_strength
+    category: diagnostic
+    dps:
+      - id: 110
+        type: integer
+        optional: true
+        name: sensor
+        unit: dB
+        class: measurement
   - entity: button
     name: Charge
     icon: "mdi:ev-station"
