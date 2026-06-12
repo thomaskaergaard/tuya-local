@@ -1,7 +1,7 @@
 ![logo](custom_components/tuya_local/brand/icon.svg) 
 
-Please report any [issues](https://github.com/make-all/tuya-local/issues) and feel free to raise [pull requests](https://github.com/make-all/tuya-local/pulls).
-[Many others](https://github.com/make-all/tuya-local/blob/main/ACKNOWLEDGEMENTS.md) have contributed their help already.
+Please report any [issues](https://github.com/thomaskaergaard/tuya-local/issues) and feel free to raise [pull requests](https://github.com/thomaskaergaard/tuya-local/pulls).
+[Many others](https://github.com/thomaskaergaard/tuya-local/blob/main/ACKNOWLEDGEMENTS.md) have contributed their help already.
 
 [![BuyMeCoffee](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/jasonrumney)
 
@@ -41,7 +41,7 @@ follow the [instructions for adding a custom
 repository](https://hacs.xyz/docs/faq/custom_repositories) and then
 the integration will be available to install like any other.
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=make-all&repository=tuya-local&category=integration)
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=thomaskaergaard&repository=tuya-local&category=integration)
 
 ## Configuration
 
@@ -130,7 +130,7 @@ Assistant.
 
 ## Device support
 
-A list of currently supported devices can be found in the [DEVICES.md](https://github.com/make-all/tuya-local/blob/main/DEVICES.md) file.
+A list of currently supported devices can be found in the [DEVICES.md](https://github.com/thomaskaergaard/tuya-local/blob/main/DEVICES.md) file.
 
 Note that devices sometimes get firmware upgrades, or incompatible
 versions are sold under the same model name, so it is possible that
@@ -178,7 +178,7 @@ predefined (cloud only) device database, or climate device simulation.
 
 ## Contributing
 
-Documentation on building a device configuration file is in [/custom_components/tuya_local/devices/README.md](https://github.com/make-all/tuya-local/blob/main/custom_components/tuya_local/devices/README.md)
+Documentation on building a device configuration file is in [/custom_components/tuya_local/devices/README.md](https://github.com/thomaskaergaard/tuya-local/blob/main/custom_components/tuya_local/devices/README.md)
 
 If your device is not listed, you can find the information required to add a configuration for it in the following locations:
 
