@@ -2,6 +2,7 @@
 Config parser for Tuya Local devices.
 """
 
+import json
 import logging
 from base64 import b64decode, b64encode
 from collections.abc import Sequence
@@ -157,7 +158,7 @@ class TuyaDeviceConfig:
         incorrect_type_dps = [
             dp
             for dp in self._get_all_dps()
-            if dp.id in dps.keys() and not _typematch(dp.type, dps[dp.id])
+            if dp.id in dps.keys() and not _typematch(dp.wire_type, dps[dp.id])
         ]
         if len(incorrect_type_dps) > 0:
             _LOGGER.debug(
@@ -199,7 +200,7 @@ class TuyaDeviceConfig:
         all_dp = keys + matched
         for d in entity.dps():
             if (d.id not in all_dp and not d.optional and not product_match) or (
-                d.id in all_dp and not _typematch(d.type, dps[d.id])
+                d.id in all_dp and not _typematch(d.wire_type, dps[d.id])
             ):
                 return False
             if d.id in keys:
@@ -417,6 +418,20 @@ class TuyaDpsConfig:
         return types.get(t)
 
     @property
+    def wire_type(self):
+        """Return the type of the dp as sent over the wire.
+
+        For dps with a json_path, the declared type refers to the
+        extracted field, but the dp itself is a JSON string.
+        """
+        return str if self.json_path else self.type
+
+    @property
+    def json_path(self):
+        """Return the path for extracting a field from a JSON string dp."""
+        return self._config.get("json_path")
+
+    @property
     def rawtype(self):
         return self._config["type"]
 
@@ -482,6 +497,13 @@ class TuyaDpsConfig:
         mask = self.mask
         # Get raw value directly avoiding accidental scaling by decoded_value()
         raw_from_device = device.get_property(self.id)
+
+        if self.json_path:
+            return self._map_from_dps(
+                self._extract_from_json(raw_from_device, device),
+                device,
+            )
+
         bytevalue = self.decode_value(raw_from_device, device)
 
         if mask and isinstance(bytevalue, bytes):
@@ -546,6 +568,71 @@ class TuyaDpsConfig:
             return v.timestamp()
         else:
             return v
+
+    def _parse_json(self, value, device):
+        """Parse a JSON string dp value, returning None on failure."""
+        if not isinstance(value, str) or value == "":
+            return None
+        try:
+            return json.loads(value)
+        except ValueError:
+            _LOGGER.warning(
+                "%s sent invalid JSON '%s' for %s",
+                device.name,
+                value,
+                self.name,
+            )
+            return None
+
+    def _extract_from_json(self, value, device):
+        """Extract the value at json_path from a JSON string dp value."""
+        result = self._parse_json(value, device)
+        for part in str(self.json_path).split("."):
+            if isinstance(result, list):
+                try:
+                    result = result[int(part)]
+                except IndexError, ValueError:
+                    return None
+            elif isinstance(result, dict):
+                result = result.get(part)
+            else:
+                return None
+        return result
+
+    def _insert_into_json(self, result, device, pending_map):
+        """Insert result at json_path into the current value of this dp."""
+        current = pending_map.get(self.id, device.get_property(self.id))
+        parsed = self._parse_json(current, device)
+        if not isinstance(parsed, (dict, list)):
+            parsed = {}
+        target = parsed
+        parts = str(self.json_path).split(".")
+        for part in parts[:-1]:
+            if isinstance(target, list):
+                try:
+                    target = target[int(part)]
+                except IndexError, ValueError:
+                    raise ValueError(
+                        f"{self.name} cannot be set: invalid path {self.json_path}"
+                    ) from None
+            else:
+                nxt = target.get(part)
+                if not isinstance(nxt, (dict, list)):
+                    nxt = {}
+                    target[part] = nxt
+                target = nxt
+        last = parts[-1]
+        value = self._correct_type(result)
+        if isinstance(target, list):
+            try:
+                target[int(last)] = value
+            except IndexError, ValueError:
+                raise ValueError(
+                    f"{self.name} cannot be set: invalid path {self.json_path}"
+                ) from None
+        else:
+            target[last] = value
+        return json.dumps(parsed, separators=(",", ":"))
 
     def _match(self, matchdata, value):
         """Return true val1 matches val2"""
@@ -975,6 +1062,8 @@ class TuyaDpsConfig:
         #     the redirect should be followed first (typically conditional
         #     on the dps_val being None).
         current_value = device.get_property(self.id)
+        if self.json_path:
+            current_value = self._extract_from_json(current_value, device)
         current_mapping = self._find_map_for_dps(current_value, device)
         mapping = self._find_map_for_value(value, device)
         # Case 2 above: there is no value specific mapping, but based on
@@ -1134,6 +1223,10 @@ class TuyaDpsConfig:
                 current_value = int.from_bytes(decoded_value, endianness)
                 result = (current_value & ~mask) | (mask & int(result * mask_scale))
                 result = self.encode_value(result.to_bytes(length, endianness))
+
+        if self.json_path:
+            dps_map[self.id] = self._insert_into_json(result, device, pending_map)
+            return dps_map
 
         dps_map[self.id] = self._correct_type(result)
         return dps_map

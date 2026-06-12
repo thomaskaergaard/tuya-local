@@ -1,5 +1,7 @@
 """Test the config parser"""
 
+import json
+
 import pytest
 import voluptuous as vol
 from fuzzywuzzy import fuzz
@@ -120,6 +122,7 @@ DP_SCHEMA = vol.Schema(
         vol.Optional("mapping"): [MAPPING_SCHEMA],
         vol.Optional("format"): [FORMAT_SCHEMA],
         vol.Optional("mask"): str,
+        vol.Optional("json_path"): vol.Any(str, int),
         vol.Optional("endianness"): vol.In(["little"]),
         vol.Optional("mask_signed"): True,
     }
@@ -846,6 +849,112 @@ def test_default_without_mapping(mocker):
     mock_config = {"id": "1", "name": "test", "type": "string"}
     cfg = TuyaDpsConfig(mock_entity, mock_config)
     assert cfg.default is None
+
+
+def test_getting_json_path_value(mocker):
+    """Test that get_value extracts a field from a JSON string dp."""
+    mock_entity = mocker.MagicMock()
+    mock_config = {
+        "id": "1",
+        "name": "test",
+        "type": "string",
+        "json_path": "m",
+        "mapping": [
+            {"dps_val": 0, "value": "immediate"},
+            {"dps_val": 2, "value": "scheduled"},
+        ],
+    }
+    mock_device = mocker.MagicMock()
+    mock_device.get_property.return_value = '{"m":2,"dt":0,"ss":"02:00","se":"16:00"}'
+    cfg = TuyaDpsConfig(mock_entity, mock_config)
+    assert cfg.wire_type is str
+    assert cfg.get_value(mock_device) == "scheduled"
+
+
+def test_getting_nested_json_path_value(mocker):
+    """Test that get_value extracts a nested list element from a JSON dp."""
+    mock_entity = mocker.MagicMock()
+    mock_config = {
+        "id": "1",
+        "name": "test",
+        "type": "integer",
+        "json_path": "L1.0",
+    }
+    mock_device = mocker.MagicMock()
+    mock_device.get_property.return_value = '{"L1":[2320,0,0],"t":190}'
+    cfg = TuyaDpsConfig(mock_entity, mock_config)
+    assert cfg.get_value(mock_device) == 2320
+
+
+def test_getting_json_path_value_with_invalid_json(mocker):
+    """Test that get_value returns None for invalid JSON."""
+    mock_entity = mocker.MagicMock()
+    mock_config = {
+        "id": "1",
+        "name": "test",
+        "type": "integer",
+        "json_path": "m",
+    }
+    mock_device = mocker.MagicMock()
+    mock_device.get_property.return_value = "not json"
+    cfg = TuyaDpsConfig(mock_entity, mock_config)
+    assert cfg.get_value(mock_device) is None
+
+
+def test_getting_json_path_value_with_missing_key(mocker):
+    """Test that get_value returns None when the path does not exist."""
+    mock_entity = mocker.MagicMock()
+    mock_config = {
+        "id": "1",
+        "name": "test",
+        "type": "integer",
+        "json_path": "missing.key",
+    }
+    mock_device = mocker.MagicMock()
+    mock_device.get_property.return_value = '{"m":2}'
+    cfg = TuyaDpsConfig(mock_entity, mock_config)
+    assert cfg.get_value(mock_device) is None
+
+
+def test_setting_json_path_value(mocker):
+    """Test that get_values_to_set updates a field in a JSON string dp."""
+    mock_entity = mocker.MagicMock()
+    mock_config = {
+        "id": "1",
+        "name": "test",
+        "type": "integer",
+        "json_path": "m",
+        "mapping": [
+            {"dps_val": 0, "value": "immediate"},
+            {"dps_val": 2, "value": "scheduled"},
+        ],
+    }
+    mock_device = mocker.MagicMock()
+    mock_device.get_property.return_value = '{"m":2,"dt":0,"ss":"02:00","se":"16:00"}'
+    cfg = TuyaDpsConfig(mock_entity, mock_config)
+    result = cfg.get_values_to_set(mock_device, "immediate")
+    assert json.loads(result["1"]) == {
+        "m": 0,
+        "dt": 0,
+        "ss": "02:00",
+        "se": "16:00",
+    }
+
+
+def test_setting_json_path_value_without_current_value(mocker):
+    """Test that get_values_to_set works when no current value exists."""
+    mock_entity = mocker.MagicMock()
+    mock_config = {
+        "id": "1",
+        "name": "test",
+        "type": "string",
+        "json_path": "ss",
+    }
+    mock_device = mocker.MagicMock()
+    mock_device.get_property.return_value = None
+    cfg = TuyaDpsConfig(mock_entity, mock_config)
+    result = cfg.get_values_to_set(mock_device, "03:30")
+    assert json.loads(result["1"]) == {"ss": "03:30"}
 
 
 def test_matching_with_product_id():
