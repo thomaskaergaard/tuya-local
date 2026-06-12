@@ -34,7 +34,7 @@ entities:
         type: json
         name: metrics
       - id: 103
-        type: string
+        type: json
         optional: true
         name: selftest
       - id: 104
@@ -42,7 +42,7 @@ entities:
         optional: true
         name: alarm
       - id: 105
-        type: string
+        type: json
         optional: true
         name: history
       - id: 108
@@ -67,6 +67,181 @@ entities:
         name: sensor
         unit: dB
         class: measurement
+  - entity: sensor
+    name: Voltage phase 1
+    class: voltage
+    dps:
+      - id: 102
+        type: integer
+        optional: true
+        name: sensor
+        json_path: L1.0
+        unit: V
+        class: measurement
+        mapping:
+          - scale: 10
+  - entity: sensor
+    name: Voltage phase 2
+    class: voltage
+    dps:
+      - id: 102
+        type: integer
+        optional: true
+        name: sensor
+        json_path: L2.0
+        unit: V
+        class: measurement
+        mapping:
+          - scale: 10
+  - entity: sensor
+    name: Voltage phase 3
+    class: voltage
+    dps:
+      - id: 102
+        type: integer
+        optional: true
+        name: sensor
+        json_path: L3.0
+        unit: V
+        class: measurement
+        mapping:
+          - scale: 10
+  - entity: sensor
+    name: Current phase 1
+    class: current
+    dps:
+      - id: 102
+        type: integer
+        optional: true
+        name: sensor
+        json_path: L1.1
+        unit: A
+        class: measurement
+        mapping:
+          - scale: 1000
+  - entity: sensor
+    name: Current phase 2
+    class: current
+    dps:
+      - id: 102
+        type: integer
+        optional: true
+        name: sensor
+        json_path: L2.1
+        unit: A
+        class: measurement
+        mapping:
+          - scale: 1000
+  - entity: sensor
+    name: Current phase 3
+    class: current
+    dps:
+      - id: 102
+        type: integer
+        optional: true
+        name: sensor
+        json_path: L3.1
+        unit: A
+        class: measurement
+        mapping:
+          - scale: 1000
+  - entity: sensor
+    name: Power
+    class: power
+    dps:
+      - id: 102
+        type: integer
+        optional: true
+        name: sensor
+        json_path: p
+        unit: W
+        class: measurement
+  - entity: sensor
+    name: Temperature
+    class: temperature
+    dps:
+      - id: 102
+        type: integer
+        optional: true
+        name: sensor
+        json_path: t
+        unit: C
+        class: measurement
+        mapping:
+          - scale: 10
+  - entity: sensor
+    name: Charge energy
+    class: energy
+    dps:
+      - id: 102
+        type: integer
+        optional: true
+        name: sensor
+        json_path: e
+        unit: kWh
+        class: total
+        mapping:
+          - scale: 10
+  - entity: sensor
+    name: Charge time
+    class: duration
+    category: diagnostic
+    dps:
+      - id: 102
+        type: integer
+        optional: true
+        name: sensor
+        json_path: d
+        unit: s
+  - entity: sensor
+    name: Last charge energy
+    class: energy
+    category: diagnostic
+    dps:
+      - id: 105
+        type: integer
+        optional: true
+        name: sensor
+        json_path: c
+        unit: kWh
+        mapping:
+          - scale: 10
+      - id: 105
+        type: string
+        optional: true
+        name: start_time
+        json_path: s
+      - id: 105
+        type: string
+        optional: true
+        name: end_time
+        json_path: e
+  - entity: sensor
+    name: Last charge duration
+    class: duration
+    category: diagnostic
+    dps:
+      - id: 105
+        type: integer
+        optional: true
+        name: sensor
+        json_path: d
+        unit: s
+  - entity: sensor
+    name: Last self test
+    icon: "mdi:check-decagram"
+    category: diagnostic
+    dps:
+      - id: 103
+        type: string
+        optional: true
+        name: sensor
+        json_path: t
+      - id: 103
+        type: string
+        optional: true
+        name: result
+        json_path: r
   - entity: button
     name: Charge
     icon: "mdi:ev-station"
@@ -195,15 +370,55 @@ entities:
       - id: 106
         type: string
         name: value
-  - entity: text
+  - entity: select
     name: Charge mode
-    category: config
     icon: "mdi:ev-station"
-    hidden: true
+    category: config
+    dps:
+      - id: 151
+        type: integer
+        name: option
+        json_path: m
+        mapping:
+          - dps_val: 0
+            value: Immediate
+          - dps_val: 1
+            value: Delayed
+          - dps_val: 2
+            value: Scheduled
+  - entity: number
+    name: Charge delay
+    icon: "mdi:timer-outline"
+    category: config
+    dps:
+      - id: 151
+        type: integer
+        name: value
+        json_path: dt
+        unit: h
+        range:
+          min: 0
+          max: 16
+        mapping:
+          - scale: 2
+  - entity: text
+    name: Schedule start
+    icon: "mdi:clock-start"
+    category: config
     dps:
       - id: 151
         type: string
         name: value
+        json_path: ss
+  - entity: text
+    name: Schedule end
+    icon: "mdi:clock-end"
+    category: config
+    dps:
+      - id: 151
+        type: string
+        name: value
+        json_path: se
   - entity: text
     name: Language config
     icon: "mdi:translate"
