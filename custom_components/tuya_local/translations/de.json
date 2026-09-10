@@ -12,10 +12,11 @@
             },
             "auto": {
                 "title": "Gefundene Geräte",
-                "description": "Diese Tuya-Geräte melden sich in deinem lokalen Netzwerk und sind noch nicht eingerichtet.\n\nAls \"Unknown device\" aufgeführte Geräte haben auf ihrem eigenen Port geantwortet, aber ein Gerät gibt seine Identität nur an jemanden preis, der bereits seinen lokalen Schlüssel besitzt. Wenn du eines auswählst, wirst du zur Anmeldung bei deinem Tuya-Konto aufgefordert, das den Schlüssel liefert und den Rest automatisch ausfüllt.\n\nBeende die mobile App, bevor du fortfährst, da ihre Verbindungen zum Gerät die Kommunikation von Tuya Local oft blockieren.",
+                "description": "Diese Tuya-Geräte melden sich in deinem lokalen Netzwerk und sind noch nicht eingerichtet.\n\nAls \"Unknown device\" aufgeführte Geräte haben auf ihrem eigenen Port geantwortet, aber ein Gerät gibt seine Identität nur an jemanden preis, der bereits seinen lokalen Schlüssel besitzt. Wenn du eines auswählst, wirst du zur Anmeldung bei deinem Tuya-Konto aufgefordert, das den Schlüssel liefert und den Rest automatisch ausfüllt.\n\nBeende die mobile App, bevor du fortfährst, da ihre Verbindungen zum Gerät die Kommunikation von Tuya Local oft blockieren.\n\nWenn du mehr als ein Gerät auswählst, werden alle auf einmal ohne weitere Fragen hinzugefügt.",
                 "data": {
-                    "device_id": "Gerät:",
-                    "quick_add": "Ohne weitere Fragen hinzufügen"
+                    "device_id": "Geräte",
+                    "quick_add": "Ohne weitere Fragen hinzufügen",
+                    "area_id": "Bereich"
                 }
             },
             "account": {
@@ -105,14 +106,19 @@
             "already_configured": "Es wurde bereits ein Gerät mit dieser ID hinzugefügt.",
             "not_supported": "Dieses Gerät wird leider nicht unterstützt.",
             "no_devices": "Für das Konto konnten keine nicht registrierten Geräte gefunden werden.",
-            "no_discovered_devices": "Es wurden keine nicht eingerichteten Geräte gefunden. Geräte werden nur gefunden, wenn sie eingeschaltet und von Home Assistant erreichbar sind. Geräte in einem anderen Subnetz oder VLAN sind nicht zu hören, daher muss deren Netzwerk unter `discovery_networks` in der configuration.yaml angegeben werden."
+            "no_discovered_devices": "Es wurden keine nicht eingerichteten Geräte gefunden. Geräte werden nur gefunden, wenn sie eingeschaltet und von Home Assistant erreichbar sind. Geräte in einem anderen Subnetz oder VLAN sind nicht zu hören, daher muss deren Netzwerk unter `discovery_networks` in der configuration.yaml angegeben werden.",
+            "bulk_added": "{added_count} Geräte hinzugefügt: {added}",
+            "bulk_partial": "{added_count} Geräte hinzugefügt: {added}\n\nDiese wurden ausgelassen, weil sie einzeln beantwortet werden müssen: {skipped}. Füge sie nacheinander hinzu.",
+            "bulk_none_added": "Keines der ausgewählten Geräte konnte allein hinzugefügt werden. Füge sie nacheinander hinzu, damit die fehlenden Angaben ergänzt werden können.",
+            "bulk_needs_attention": "Dieses Gerät benötigt mehr Informationen, als ein Massen-Hinzufügen liefern kann."
         },
         "error": {
             "connection": "Mit diesen Angaben kann keine Verbindung zu Ihrem Gerät hergestellt werden. Es könnte sich um ein intermittierendes Problem handeln, oder die Angaben sind falsch. Wenn Sie eine bestimmte Protokollversion ausgewählt haben, versuchen Sie stattdessen 'auto'.",
             "does_not_need_hub": "Das Gerät benötigt kein Gateway und es wurde eines ausgewählt. ",
             "needs_hub": "Das Gerät benötigt ein Gateway und es wurde keines ausgewählt.",
             "login_error": "Anmeldung nicht möglich. Bitte überprüfe deine Angaben und versuche es erneut.",
-            "no_devices": "In diesem Konto wurden keine Geräte gefunden."
+            "no_devices": "In diesem Konto wurden keine Geräte gefunden.",
+            "no_device_selected": "Wähle mindestens ein Gerät aus."
         }
     },
     "selector": {

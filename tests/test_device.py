@@ -2,6 +2,7 @@ import asyncio
 from time import time
 
 import pytest
+from homeassistant.helpers import area_registry as ar
 
 # from homeassistant.const import EVENT_HOMEASSISTANT_STARTED, EVENT_HOMEASSISTANT_STOP
 from custom_components.tuya_local.device import TuyaLocalDevice
@@ -66,6 +67,37 @@ def test_device_info(subject, mock_api):
         "name": "Some name",
         "manufacturer": "Tuya",
     }
+
+
+def test_device_info_suggests_the_area_it_was_added_to(patched_hass, mock_api):
+    """An area chosen while adding is only honoured at registration time."""
+    area = ar.async_get(patched_hass).async_get_or_create("Living room")
+    subject = TuyaLocalDevice(
+        "Some name",
+        "some_dev_id",
+        "some.ip.address",
+        "some_local_key",
+        "auto",
+        None,
+        patched_hass,
+        area_id=area.id,
+    )
+    assert subject.device_info["suggested_area"] == "Living room"
+
+
+def test_device_info_ignores_an_area_that_has_gone(patched_hass, mock_api):
+    """A deleted area must not stop the device being registered."""
+    subject = TuyaLocalDevice(
+        "Some name",
+        "some_dev_id",
+        "some.ip.address",
+        "some_local_key",
+        "auto",
+        None,
+        patched_hass,
+        area_id="no_such_area",
+    )
+    assert "suggested_area" not in subject.device_info
 
 
 def test_has_returned_state(subject):

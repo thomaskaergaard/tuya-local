@@ -12,10 +12,11 @@
             },
             "auto": {
                 "title": "Appareils découverts",
-                "description": "Ces appareils Tuya se signalent sur votre réseau local et ne sont pas encore configurés.\n\nLes appareils affichés comme \"Unknown device\" ont répondu sur leur propre port, mais un appareil ne révèle son identité qu'à celui qui possède déjà sa clé locale. En choisir un vous demandera de vous connecter à votre compte Tuya, qui fournit la clé et remplit le reste automatiquement.\n\nFermez l'application mobile avant de continuer, car ses connexions à l'appareil bloquent souvent la communication de Tuya Local.",
+                "description": "Ces appareils Tuya se signalent sur votre réseau local et ne sont pas encore configurés.\n\nLes appareils affichés comme \"Unknown device\" ont répondu sur leur propre port, mais un appareil ne révèle son identité qu'à celui qui possède déjà sa clé locale. En choisir un vous demandera de vous connecter à votre compte Tuya, qui fournit la clé et remplit le reste automatiquement.\n\nFermez l'application mobile avant de continuer, car ses connexions à l'appareil bloquent souvent la communication de Tuya Local.\n\nSélectionner plusieurs appareils les ajoute tous d'un coup, sans autre question.",
                 "data": {
-                    "device_id": "Appareil :",
-                    "quick_add": "Ajouter sans autre question"
+                    "device_id": "Appareils",
+                    "quick_add": "Ajouter sans autre question",
+                    "area_id": "Zone"
                 }
             },
             "account": {
@@ -105,14 +106,19 @@
             "already_configured": "Un appareil avec cet ID a déjà été ajouté.",
             "not_supported": "Désolé, il n'y a pas de support pour cet appareil.",
             "no_devices": "Impossible de trouver des appareils non enregistrés pour le compte.",
-            "no_discovered_devices": "Aucun appareil non configuré n'a été trouvé. Les appareils ne sont trouvés que s'ils sont allumés et joignables depuis Home Assistant. Les appareils situés sur un autre sous-réseau ou VLAN ne peuvent pas être entendus : leur réseau doit être indiqué sous `discovery_networks` dans configuration.yaml."
+            "no_discovered_devices": "Aucun appareil non configuré n'a été trouvé. Les appareils ne sont trouvés que s'ils sont allumés et joignables depuis Home Assistant. Les appareils situés sur un autre sous-réseau ou VLAN ne peuvent pas être entendus : leur réseau doit être indiqué sous `discovery_networks` dans configuration.yaml.",
+            "bulk_added": "{added_count} appareils ajoutés : {added}",
+            "bulk_partial": "{added_count} appareils ajoutés : {added}\n\nCeux-ci ont été laissés de côté car ils demandent une réponse individuelle : {skipped}. Ajoutez-les un par un.",
+            "bulk_none_added": "Aucun des appareils sélectionnés n'a pu être ajouté seul. Ajoutez-les un par un afin de compléter les informations manquantes.",
+            "bulk_needs_attention": "Cet appareil demande plus d'informations qu'un ajout groupé ne peut en fournir."
         },
         "error": {
             "connection": "Impossible de se connecter à votre appareil avec ces détails. Il peut s'agir d'un problème intermittent, ou ils peuvent être incorrects. Si vous avez sélectionné une version de protocole spécifique, essayez 'auto' à la place.",
             "does_not_need_hub": "L'appareil n'a pas besoin de passerelle et une a été sélectionnée. ",
             "needs_hub": "L'appareil a besoin d'une passerelle et aucune n'a été sélectionnée.",
             "login_error": "Connexion impossible. Vérifiez vos informations et réessayez.",
-            "no_devices": "Aucun appareil trouvé dans ce compte."
+            "no_devices": "Aucun appareil trouvé dans ce compte.",
+            "no_device_selected": "Sélectionnez au moins un appareil."
         }
     },
     "selector": {

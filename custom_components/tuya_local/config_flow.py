@@ -13,8 +13,9 @@ from homeassistant.config_entries import (
 )
 from homeassistant.const import CONF_EMAIL, CONF_HOST, CONF_NAME, CONF_PASSWORD
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.data_entry_flow import FlowResult
+from homeassistant.data_entry_flow import FlowResult, FlowResultType
 from homeassistant.helpers.selector import (
+    AreaSelector,
     QrCodeSelector,
     QrCodeSelectorConfig,
     QrErrorCorrectionLevel,
@@ -29,6 +30,7 @@ from .cloud import Cloud
 from .cloud_cache import async_get_cache
 from .const import (
     API_PROTOCOL_VERSIONS,
+    CONF_AREA_ID,
     CONF_DEVICE_CID,
     CONF_DEVICE_ID,
     CONF_LOCAL_KEY,
@@ -82,12 +84,14 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
     __pending_host: str | None = None
     __oem_cloud: OemCloud | None = None
     __quick_add: bool = False
+    __area_id: str | None = None
 
     def __init__(self) -> None:
         """Initialize the config flow."""
         self.cloud = None
         self.__oem_cloud = None
         self.__quick_add = False
+        self.__area_id = None
 
     async def async_init_cloud(self):
         """Create the cloud interface, backed by the persistent cache."""
@@ -278,52 +282,16 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
         """Pick from the devices found on the network."""
         devices = await self._async_discovered_devices()
 
+        errors = {}
         if user_input is not None:
-            choice = user_input[CONF_DEVICE_ID]
-            if choice.startswith(UNIDENTIFIED_PREFIX):
-                # The device answered on its own port but no key we hold
-                # identifies it, so ask the cloud account who it is.
-                self.__pending_host = choice[len(UNIDENTIFIED_PREFIX) :]
-                return await self.async_step_identify()
-
-            device = devices.get(choice)
-            if device is None:
-                # It was in the list when the form was shown, so it can only
-                # have disappeared by being configured in a parallel flow.
-                return self.async_abort(reason="already_configured")
-
-            await self.async_set_unique_id(device.device_id)
-            self._abort_if_unique_id_configured()
-
-            cache = await async_get_cache(self.hass)
-            cached = cache.get_device(device.device_id) or {}
-            self.__cloud_device = {
-                "id": device.device_id,
-                "ip": device.ip,
-                CONF_LOCAL_KEY: cached.get(CONF_LOCAL_KEY, ""),
-                "name": cached.get("name"),
-                "product_name": cached.get("product_name"),
-                "product_id": cached.get("product_id"),
-                "local_product_id": device.product_id,
-                "version": device.version,
-            }
+            choices = user_input[CONF_DEVICE_ID]
+            self.__area_id = user_input.get(CONF_AREA_ID)
             self.__quick_add = user_input.get(CONF_QUICK_ADD, False)
-            if self.__quick_add and self.__cloud_device[CONF_LOCAL_KEY] and device.ip:
-                # Everything the connection form would ask for is already
-                # known, so answer it rather than showing it. It is shown
-                # again with the error if the connection does not work.
-                return await self.async_step_local(
-                    {
-                        CONF_DEVICE_ID: device.device_id,
-                        CONF_HOST: device.ip,
-                        CONF_LOCAL_KEY: self.__cloud_device[CONF_LOCAL_KEY],
-                        CONF_PROTOCOL_VERSION: (
-                            str(device.version) if device.version else "auto"
-                        ),
-                        CONF_POLL_ONLY: False,
-                    }
-                )
-            return await self.async_step_local()
+            if len(choices) > 1:
+                return await self._async_bulk_add(choices, devices)
+            if choices:
+                return await self._async_single_add(choices[0], devices)
+            errors[CONF_DEVICE_ID] = "no_device_selected"
 
         if not devices and not self.__unidentified:
             return self.async_abort(reason="no_discovered_devices")
@@ -348,16 +316,175 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
 
         fields: OrderedDict[vol.Marker, Any] = OrderedDict()
         fields[vol.Required(CONF_DEVICE_ID)] = SelectSelector(
-            SelectSelectorConfig(options=device_list, mode=SelectSelectorMode.DROPDOWN)
+            SelectSelectorConfig(
+                options=device_list,
+                mode=SelectSelectorMode.DROPDOWN,
+                multiple=True,
+            )
         )
+        fields[vol.Optional(CONF_AREA_ID)] = AreaSelector()
         fields[vol.Required(CONF_QUICK_ADD, default=True)] = bool
 
         return self.async_show_form(
             step_id="auto",
             data_schema=vol.Schema(fields),
-            errors={},
+            errors=errors,
             last_step=False,
         )
+
+    async def _async_single_add(self, choice, devices):
+        """Take the one selected device through the setup steps."""
+        if choice.startswith(UNIDENTIFIED_PREFIX):
+            # The device answered on its own port but no key we hold
+            # identifies it, so ask the cloud account who it is.
+            self.__pending_host = choice[len(UNIDENTIFIED_PREFIX) :]
+            return await self.async_step_identify()
+
+        device = devices.get(choice)
+        if device is None:
+            # It was in the list when the form was shown, so it can only
+            # have disappeared by being configured in a parallel flow.
+            return self.async_abort(reason="already_configured")
+
+        await self.async_set_unique_id(device.device_id)
+        self._abort_if_unique_id_configured()
+
+        cache = await async_get_cache(self.hass)
+        cached = cache.get_device(device.device_id) or {}
+        self.__cloud_device = {
+            "id": device.device_id,
+            "ip": device.ip,
+            CONF_LOCAL_KEY: cached.get(CONF_LOCAL_KEY, ""),
+            "name": cached.get("name"),
+            "product_name": cached.get("product_name"),
+            "product_id": cached.get("product_id"),
+            "local_product_id": device.product_id,
+            "version": device.version,
+        }
+        if self.__quick_add and self.__cloud_device[CONF_LOCAL_KEY] and device.ip:
+            # Everything the connection form would ask for is already
+            # known, so answer it rather than showing it. It is shown
+            # again with the error if the connection does not work.
+            return await self.async_step_local(
+                {
+                    CONF_DEVICE_ID: device.device_id,
+                    CONF_HOST: device.ip,
+                    CONF_LOCAL_KEY: self.__cloud_device[CONF_LOCAL_KEY],
+                    CONF_PROTOCOL_VERSION: (
+                        str(device.version) if device.version else "auto"
+                    ),
+                    CONF_POLL_ONLY: False,
+                }
+            )
+        return await self.async_step_local()
+
+    async def _async_bulk_add(self, choices, devices):
+        """Add several devices at once.
+
+        A single device is worth asking questions about, but a selection of
+        them is not: the point of choosing several is to avoid answering the
+        same questions over and over. Each one is added by its own flow,
+        because a flow can only create one entry, and any device that turns
+        out to need an answer is reported instead so it can be added on its
+        own.
+        """
+        cache = await async_get_cache(self.hass)
+        added: list[str] = []
+        skipped: list[str] = []
+
+        for choice in choices:
+            device = devices.get(choice)
+            if device is None:
+                # An address that no key identified, or something that a
+                # parallel flow configured while this form was open.
+                skipped.append(
+                    choice[len(UNIDENTIFIED_PREFIX) :]
+                    if choice.startswith(UNIDENTIFIED_PREFIX)
+                    else choice
+                )
+                continue
+
+            cached = cache.get_device(device.device_id) or {}
+            name = cached.get("name") or device.device_id
+            local_key = cached.get(CONF_LOCAL_KEY)
+            if not local_key or not device.ip:
+                skipped.append(name)
+                continue
+
+            try:
+                result = await self.hass.config_entries.flow.async_init(
+                    DOMAIN,
+                    context={"source": "bulk"},
+                    data={
+                        "cloud_device": {
+                            "id": device.device_id,
+                            "ip": device.ip,
+                            CONF_LOCAL_KEY: local_key,
+                            "name": cached.get("name"),
+                            "product_name": cached.get("product_name"),
+                            "product_id": cached.get("product_id"),
+                            "local_product_id": device.product_id,
+                            "version": device.version,
+                        },
+                        CONF_AREA_ID: self.__area_id,
+                        "local": {
+                            CONF_DEVICE_ID: device.device_id,
+                            CONF_HOST: device.ip,
+                            CONF_LOCAL_KEY: local_key,
+                            CONF_PROTOCOL_VERSION: (
+                                str(device.version) if device.version else "auto"
+                            ),
+                            CONF_POLL_ONLY: False,
+                        },
+                    },
+                )
+            except Exception as e:
+                # One awkward device must not cost the rest of the batch.
+                _LOGGER.warning(
+                    "Unable to add %s in bulk: %s %s", name, type(e).__name__, e
+                )
+                skipped.append(name)
+                continue
+
+            if result["type"] == FlowResultType.CREATE_ENTRY:
+                added.append(result["title"])
+            else:
+                skipped.append(name)
+
+        if not added:
+            return self.async_abort(reason="bulk_none_added")
+        if skipped:
+            return self.async_abort(
+                reason="bulk_partial",
+                description_placeholders={
+                    "added_count": str(len(added)),
+                    "added": ", ".join(added),
+                    "skipped": ", ".join(skipped),
+                },
+            )
+        return self.async_abort(
+            reason="bulk_added",
+            description_placeholders={
+                "added_count": str(len(added)),
+                "added": ", ".join(added),
+            },
+        )
+
+    async def async_step_bulk(self, import_info):
+        """Add one device of a bulk selection, without asking anything."""
+        self.__cloud_device = import_info["cloud_device"]
+        self.__area_id = import_info.get(CONF_AREA_ID)
+        self.__quick_add = True
+
+        await self.async_set_unique_id(self.__cloud_device["id"])
+        self._abort_if_unique_id_configured()
+
+        result = await self.async_step_local(import_info["local"])
+        if result["type"] == FlowResultType.CREATE_ENTRY:
+            return result
+        # A form here means the device could not be connected to, or that
+        # its configuration is not obvious. Neither can be answered in bulk.
+        return self.async_abort(reason="bulk_needs_attention")
 
     @staticmethod
     def _discovered_device_label(device, cached) -> str:
@@ -1041,7 +1168,17 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
         if self.__cloud_device and self.__cloud_device.get("name"):
             name = self.__cloud_device["name"]
         _LOGGER.debug("Quick adding %s as %s", name, self.data[CONF_TYPE])
-        return self.async_create_entry(title=name, data=self.data)
+        return self.async_create_entry(title=name, data=self._with_area(self.data))
+
+    def _with_area(self, data):
+        """Note the area the device should be filed under, if one was picked.
+
+        It is consumed the first time the device registers itself, which is
+        the only moment Home Assistant will accept a suggestion for it.
+        """
+        if self.__area_id:
+            return {**data, CONF_AREA_ID: self.__area_id}
+        return data
 
     async def async_step_choose_entities(self, user_input=None):
         config = await self.hass.async_add_executor_job(
@@ -1052,7 +1189,7 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
             title = user_input[CONF_NAME]
             del user_input[CONF_NAME]
             return self.async_create_entry(
-                title=title, data={**self.data, **user_input}
+                title=title, data=self._with_area({**self.data, **user_input})
             )
         default_name = config.name
         if self.__cloud_device and self.__cloud_device.get("name"):

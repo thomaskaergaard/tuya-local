@@ -15,6 +15,7 @@ from custom_components.tuya_local import (
 )
 from custom_components.tuya_local.cloud_cache import async_get_cache
 from custom_components.tuya_local.const import (
+    CONF_AREA_ID,
     CONF_DEVICE_CID,
     CONF_DEVICE_ID,
     CONF_LOCAL_KEY,
@@ -754,7 +755,7 @@ async def test_flow_auto_prefills_local_step(hass, fake_discovery, mocker):
 
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"],
-        {CONF_DEVICE_ID: "deviceid", CONF_QUICK_ADD: False},
+        {CONF_DEVICE_ID: ["deviceid"], CONF_QUICK_ADD: False},
     )
     assert result["step_id"] == "local"
     defaults = {
@@ -792,7 +793,7 @@ async def test_flow_auto_offers_unidentified_hosts(hass, fake_discovery, mocker)
     )
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"],
-        {CONF_DEVICE_ID: "host:192.168.3.11"},
+        {CONF_DEVICE_ID: ["host:192.168.3.11"]},
     )
     assert result["type"] == FlowResultType.MENU
     assert result["step_id"] == "account"
@@ -857,7 +858,7 @@ async def test_flow_auto_identifies_host_from_the_account(hass, fake_discovery, 
     )
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"],
-        {CONF_DEVICE_ID: "host:192.168.3.11"},
+        {CONF_DEVICE_ID: ["host:192.168.3.11"]},
     )
     assert result["step_id"] == "local"
     defaults = {
@@ -897,7 +898,7 @@ async def test_flow_auto_falls_back_when_the_account_has_no_match(
     )
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"],
-        {CONF_DEVICE_ID: "host:192.168.3.11"},
+        {CONF_DEVICE_ID: ["host:192.168.3.11"]},
     )
     assert result["step_id"] == "local"
     defaults = {
@@ -947,7 +948,7 @@ async def _account_menu(hass, mocker):
     )
     return await hass.config_entries.flow.async_configure(
         result["flow_id"],
-        {CONF_DEVICE_ID: "host:192.168.3.11"},
+        {CONF_DEVICE_ID: ["host:192.168.3.11"], CONF_QUICK_ADD: False},
     )
 
 
@@ -1457,7 +1458,7 @@ async def test_quick_add_skips_the_remaining_questions(
     )
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"],
-        {CONF_DEVICE_ID: "deviceid", CONF_QUICK_ADD: True},
+        {CONF_DEVICE_ID: ["deviceid"], CONF_QUICK_ADD: True},
     )
 
     assert result["type"] == FlowResultType.CREATE_ENTRY
@@ -1500,7 +1501,7 @@ async def test_quick_add_still_asks_when_the_match_is_ambiguous(
     )
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"],
-        {CONF_DEVICE_ID: "deviceid", CONF_QUICK_ADD: True},
+        {CONF_DEVICE_ID: ["deviceid"], CONF_QUICK_ADD: True},
     )
 
     assert result["type"] == FlowResultType.FORM
@@ -1531,7 +1532,7 @@ async def test_quick_add_still_asks_when_the_match_is_imperfect(
     )
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"],
-        {CONF_DEVICE_ID: "deviceid", CONF_QUICK_ADD: True},
+        {CONF_DEVICE_ID: ["deviceid"], CONF_QUICK_ADD: True},
     )
 
     assert result["type"] == FlowResultType.FORM
@@ -1558,8 +1559,278 @@ async def test_quick_add_falls_back_when_the_key_is_unknown(
     )
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"],
-        {CONF_DEVICE_ID: "deviceid", CONF_QUICK_ADD: True},
+        {CONF_DEVICE_ID: ["deviceid"], CONF_QUICK_ADD: True},
     )
 
     assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "local"
+
+
+async def _cache_devices(hass, names):
+    """Put devices with known keys into the cloud cache."""
+    cache = await async_get_cache(hass)
+    await cache.async_update_devices(
+        {
+            device_id: {
+                "id": device_id,
+                CONF_LOCAL_KEY: TESTKEY,
+                "name": name,
+                "product_name": "Bulb",
+            }
+            for device_id, name in names.items()
+        }
+    )
+
+
+def _discovered(*device_ids):
+    return {
+        device_id: DiscoveredDevice(
+            device_id=device_id,
+            ip=f"10.0.0.{n + 5}",
+            product_id="prodid",
+            version="3.3",
+        )
+        for n, device_id in enumerate(device_ids)
+    }
+
+
+def _connecting_device(mocker, quality=100):
+    mock_device = mocker.MagicMock()
+    mock_device._protocol_configured = "3.3"
+    mock_device._product_ids = []
+    setup_device_mock(mock_device, mocker, devtype="kogan_kahtp_heater")
+    mock_device.async_possible_types.return_value[
+        0
+    ].match_quality.return_value = quality
+    mocker.patch(
+        "custom_components.tuya_local.config_flow.async_test_connection",
+        return_value=mock_device,
+    )
+    return mock_device
+
+
+@pytest.mark.asyncio
+async def test_bulk_add_adds_every_selected_device(
+    hass, bypass_setup, fake_discovery, mocker
+):
+    """Choosing several devices is a request not to be asked about each."""
+    fake_discovery.devices = _discovered("dev1", "dev2", "dev3")
+    await _cache_devices(
+        hass, {"dev1": "Lamp one", "dev2": "Lamp two", "dev3": "Lamp three"}
+    )
+    _connecting_device(mocker)
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": "user"},
+        data={"setup_mode": "auto"},
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {CONF_DEVICE_ID: ["dev1", "dev2", "dev3"], CONF_QUICK_ADD: True},
+    )
+
+    assert result["type"] == FlowResultType.ABORT
+    assert result["reason"] == "bulk_added"
+    assert result["description_placeholders"]["added_count"] == "3"
+
+    entries = hass.config_entries.async_entries(DOMAIN)
+    assert {entry.title for entry in entries} == {
+        "Lamp one",
+        "Lamp two",
+        "Lamp three",
+    }
+    assert {entry.data[CONF_DEVICE_ID] for entry in entries} == {
+        "dev1",
+        "dev2",
+        "dev3",
+    }
+    assert all(entry.data[CONF_TYPE] == "kogan_kahtp_heater" for entry in entries)
+
+
+@pytest.mark.asyncio
+async def test_bulk_add_files_devices_in_the_chosen_area(
+    hass, bypass_setup, fake_discovery, mocker
+):
+    """The point of adding a room at a time is that they land in the room."""
+    fake_discovery.devices = _discovered("dev1", "dev2")
+    await _cache_devices(hass, {"dev1": "Lamp one", "dev2": "Lamp two"})
+    _connecting_device(mocker)
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": "user"},
+        data={"setup_mode": "auto"},
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {
+            CONF_DEVICE_ID: ["dev1", "dev2"],
+            CONF_AREA_ID: "living_room",
+            CONF_QUICK_ADD: True,
+        },
+    )
+
+    assert result["reason"] == "bulk_added"
+    entries = hass.config_entries.async_entries(DOMAIN)
+    assert all(entry.data[CONF_AREA_ID] == "living_room" for entry in entries)
+
+
+@pytest.mark.asyncio
+async def test_bulk_add_reports_the_devices_it_left_out(
+    hass, bypass_setup, fake_discovery, mocker
+):
+    """A device without a key cannot be added silently, so say so."""
+    fake_discovery.devices = _discovered("dev1", "keyless")
+    await _cache_devices(hass, {"dev1": "Lamp one"})
+    _connecting_device(mocker)
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": "user"},
+        data={"setup_mode": "auto"},
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {CONF_DEVICE_ID: ["dev1", "keyless"], CONF_QUICK_ADD: True},
+    )
+
+    assert result["type"] == FlowResultType.ABORT
+    assert result["reason"] == "bulk_partial"
+    assert result["description_placeholders"]["added"] == "Lamp one"
+    assert result["description_placeholders"]["skipped"] == "keyless"
+    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+
+
+@pytest.mark.asyncio
+async def test_bulk_add_leaves_out_devices_that_need_a_choice(
+    hass, bypass_setup, fake_discovery, mocker
+):
+    """An imperfect match is a question, and questions cannot be asked here."""
+    fake_discovery.devices = _discovered("dev1", "dev2")
+    await _cache_devices(hass, {"dev1": "Lamp one", "dev2": "Lamp two"})
+    _connecting_device(mocker, quality=85)
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": "user"},
+        data={"setup_mode": "auto"},
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {CONF_DEVICE_ID: ["dev1", "dev2"], CONF_QUICK_ADD: True},
+    )
+
+    assert result["type"] == FlowResultType.ABORT
+    assert result["reason"] == "bulk_none_added"
+    assert hass.config_entries.async_entries(DOMAIN) == []
+    # The abandoned attempts must not be left sitting in the flow list.
+    assert hass.config_entries.flow.async_progress() == []
+
+
+@pytest.mark.asyncio
+async def test_bulk_add_leaves_out_devices_it_cannot_connect_to(
+    hass, bypass_setup, fake_discovery, mocker
+):
+    """A device that does not answer needs its details checked by hand."""
+    fake_discovery.devices = _discovered("dev1", "dev2")
+    await _cache_devices(hass, {"dev1": "Lamp one", "dev2": "Lamp two"})
+    mocker.patch(
+        "custom_components.tuya_local.config_flow.async_test_connection",
+        return_value=None,
+    )
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": "user"},
+        data={"setup_mode": "auto"},
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {CONF_DEVICE_ID: ["dev1", "dev2"], CONF_QUICK_ADD: True},
+    )
+
+    assert result["reason"] == "bulk_none_added"
+    assert hass.config_entries.flow.async_progress() == []
+
+
+@pytest.mark.asyncio
+async def test_auto_step_requires_a_device_to_be_selected(hass, fake_discovery, mocker):
+    """An empty selection is a slip, not a request to add nothing."""
+    fake_discovery.devices = _discovered("dev1")
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": "user"},
+        data={"setup_mode": "auto"},
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {CONF_DEVICE_ID: [], CONF_QUICK_ADD: True},
+    )
+
+    assert result["type"] == FlowResultType.FORM
+    assert result["step_id"] == "auto"
+    assert result["errors"] == {CONF_DEVICE_ID: "no_device_selected"}
+
+
+@pytest.mark.asyncio
+async def test_single_selection_keeps_the_chosen_area(
+    hass, bypass_setup, fake_discovery, mocker
+):
+    """One device picked with an area should be filed there too."""
+    fake_discovery.devices = _discovered("dev1")
+    await _cache_devices(hass, {"dev1": "Lamp one"})
+    _connecting_device(mocker)
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": "user"},
+        data={"setup_mode": "auto"},
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {
+            CONF_DEVICE_ID: ["dev1"],
+            CONF_AREA_ID: "living_room",
+            CONF_QUICK_ADD: True,
+        },
+    )
+
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+    assert result["data"][CONF_AREA_ID] == "living_room"
+
+
+@pytest.mark.asyncio
+async def test_bulk_add_survives_a_device_that_raises(
+    hass, bypass_setup, fake_discovery, mocker
+):
+    """One awkward device must not cost the rest of the batch."""
+    fake_discovery.devices = _discovered("dev1", "dev2")
+    await _cache_devices(hass, {"dev1": "Lamp one", "dev2": "Lamp two"})
+    mock_device = _connecting_device(mocker)
+
+    def explode_for_dev1(config, hass):
+        if config[CONF_DEVICE_ID] == "dev1":
+            raise RuntimeError("boom")
+        return mock_device
+
+    mocker.patch(
+        "custom_components.tuya_local.config_flow.async_test_connection",
+        side_effect=explode_for_dev1,
+    )
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": "user"},
+        data={"setup_mode": "auto"},
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {CONF_DEVICE_ID: ["dev1", "dev2"], CONF_QUICK_ADD: True},
+    )
+
+    assert result["reason"] == "bulk_partial"
+    assert result["description_placeholders"]["added"] == "Lamp two"
+    assert result["description_placeholders"]["skipped"] == "Lamp one"
+    assert len(hass.config_entries.async_entries(DOMAIN)) == 1

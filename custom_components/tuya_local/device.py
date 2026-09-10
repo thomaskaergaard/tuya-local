@@ -16,9 +16,11 @@ from homeassistant.const import (
     EVENT_HOMEASSISTANT_STOP,
 )
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import area_registry as ar
 
 from .const import (
     API_PROTOCOL_VERSIONS,
+    CONF_AREA_ID,
     CONF_DEVICE_CID,
     CONF_DEVICE_ID,
     CONF_LOCAL_KEY,
@@ -53,6 +55,7 @@ class TuyaLocalDevice(object):
         poll_only=False,
         manufacturer=None,
         model=None,
+        area_id=None,
     ):
         """
         Represents a Tuya-based device.
@@ -68,10 +71,13 @@ class TuyaLocalDevice(object):
             poll_only (bool): True if the device should be polled only.
             manufacturer (str | None): The device manufacturer, if known.
             model (str | None): The device model, if known.
+            area_id (str | None): The area to file the device under, if it
+                was chosen while adding it.
         """
         self._name = name
         self._manufacturer = manufacturer
         self._model = model
+        self._area_id = area_id
         self._children = []
         self._force_dps = []
         self._product_ids = []
@@ -180,6 +186,12 @@ class TuyaLocalDevice(object):
         }
         if self._model:
             info["model"] = self._model
+        if self._area_id:
+            # Home Assistant files a device by area name, and only when it
+            # first registers, so a suggestion made later has no effect.
+            area = ar.async_get(self._hass).async_get_area(self._area_id)
+            if area:
+                info["suggested_area"] = area.name
         return info
 
     @property
@@ -803,6 +815,7 @@ def setup_device(hass: HomeAssistant, config: dict):
         config[CONF_POLL_ONLY],
         manufacturer=config.get(CONF_MANUFACTURER),
         model=config.get(CONF_MODEL),
+        area_id=config.get(CONF_AREA_ID),
     )
     hass.data[DOMAIN][get_device_id(config)] = {
         "device": device,

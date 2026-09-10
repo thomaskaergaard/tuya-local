@@ -12,10 +12,11 @@
             },
             "auto": {
                 "title": "Dispositivos descubiertos",
-                "description": "Estos dispositivos Tuya se están anunciando en tu red local y aún no están configurados.\n\nLos dispositivos que aparecen como \"Unknown device\" respondieron en su propio puerto, pero un dispositivo solo revela su identidad a quien ya posee su clave local. Al elegir uno se te pedirá que inicies sesión en tu cuenta Tuya, que aporta la clave y completa el resto automáticamente.\n\nCierra la aplicación móvil antes de continuar, ya que sus conexiones con el dispositivo suelen bloquear la comunicación de Tuya Local.",
+                "description": "Estos dispositivos Tuya se están anunciando en tu red local y aún no están configurados.\n\nLos dispositivos que aparecen como \"Unknown device\" respondieron en su propio puerto, pero un dispositivo solo revela su identidad a quien ya posee su clave local. Al elegir uno se te pedirá que inicies sesión en tu cuenta Tuya, que aporta la clave y completa el resto automáticamente.\n\nCierra la aplicación móvil antes de continuar, ya que sus conexiones con el dispositivo suelen bloquear la comunicación de Tuya Local.\n\nAl seleccionar más de un dispositivo se añaden todos a la vez, sin más preguntas.",
                 "data": {
-                    "device_id": "Dispositivo:",
-                    "quick_add": "Añadir sin más preguntas"
+                    "device_id": "Dispositivos",
+                    "quick_add": "Añadir sin más preguntas",
+                    "area_id": "Área"
                 }
             },
             "account": {
@@ -105,14 +106,19 @@
             "already_configured": "Ya se ha agregado un dispositivo con esa ID.",
             "not_supported": "Lo sentimos, no hay soporte para este dispositivo.",
             "no_devices": "No se puede encontrar ningún dispositivo no registrado para la cuenta.",
-            "no_discovered_devices": "No se han encontrado dispositivos sin configurar. Los dispositivos solo se encuentran cuando están encendidos y son accesibles desde Home Assistant. Los dispositivos en otra subred o VLAN no se pueden oír, por lo que su red debe indicarse en `discovery_networks` en configuration.yaml."
+            "no_discovered_devices": "No se han encontrado dispositivos sin configurar. Los dispositivos solo se encuentran cuando están encendidos y son accesibles desde Home Assistant. Los dispositivos en otra subred o VLAN no se pueden oír, por lo que su red debe indicarse en `discovery_networks` en configuration.yaml.",
+            "bulk_added": "Se añadieron {added_count} dispositivos: {added}",
+            "bulk_partial": "Se añadieron {added_count} dispositivos: {added}\n\nEstos se omitieron porque necesitan responderse individualmente: {skipped}. Añádelos de uno en uno.",
+            "bulk_none_added": "Ninguno de los dispositivos seleccionados se pudo añadir por sí solo. Añádelos de uno en uno para completar los datos que faltan.",
+            "bulk_needs_attention": "Este dispositivo necesita más información de la que puede aportar un alta masiva."
         },
         "error": {
             "connection": "No se puede conectar a su dispositivo con esos detalles. Podría ser un problema intermitente, o pueden ser incorrectos. Si seleccionó una versión de protocolo específica, pruebe 'auto' en su lugar.",
             "does_not_need_hub": "El dispositivo no necesita una puerta de enlace y se seleccionó una. ",
             "needs_hub": "El dispositivo necesita una puerta de enlace y no se seleccionó ninguna.",
             "login_error": "No se ha podido iniciar sesión. Comprueba tus datos e inténtalo de nuevo.",
-            "no_devices": "No se han encontrado dispositivos en esa cuenta."
+            "no_devices": "No se han encontrado dispositivos en esa cuenta.",
+            "no_device_selected": "Selecciona al menos un dispositivo."
         }
     },
     "selector": {

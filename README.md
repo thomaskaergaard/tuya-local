@@ -79,6 +79,14 @@ When a discovered device is added, either from the Integrations page or through 
 
 Anything less certain still asks. If the key is unknown, or the connection fails, the usual connection form appears with what is known already filled in; if several configurations fit equally well, or the best one is only a partial match, you are asked to choose. Turn the option off to review every step, which is what you want when the device needs a name other than the one it has in the app.
 
+#### Adding a whole room at once
+
+The device list in the automatic setup choice takes more than one device, and an area can be chosen alongside it. Every device selected is added in one go under the name it has in the app and filed in that area, so a room's worth of bulbs takes one pass instead of one pass each.
+
+Selecting several devices always adds them without further questions, because there is no way to ask about each one in turn. Any device that would have needed an answer — one whose key is not known, one that does not answer, or one whose configuration is not obvious — is left out and named in the summary at the end, so you can add it on its own.
+
+The area is only a suggestion, which Home Assistant takes when the device first registers itself. Moving a device to another area afterwards is not undone by it.
+
 Protocol 3.1 to 3.4 devices announce themselves unprompted, but 3.5 devices stay silent until they are asked, so a discovery request is also broadcast when Home Assistant starts, once a minute afterwards, and whenever the automatic setup choice is used.
 
 #### Devices on another subnet or VLAN

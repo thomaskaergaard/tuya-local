@@ -11,10 +11,11 @@
             },
             "auto": {
                 "title": "Discovered devices",
-                "description": "These Tuya devices are announcing themselves on your local network and are not set up yet.\n\nDevices listed as \"Unknown device\" answered on their own port, but a device only reveals its identity to someone who already holds its local key. Choosing one asks you to sign in to your Tuya account, which supplies the key and fills in the rest automatically.\n\nShut down the mobile app before continuing, as its connections to the device will often block Tuya Local communication with it.",
+                "description": "These Tuya devices are announcing themselves on your local network and are not set up yet.\n\nDevices listed as \"Unknown device\" answered on their own port, but a device only reveals its identity to someone who already holds its local key. Choosing one asks you to sign in to your Tuya account, which supplies the key and fills in the rest automatically.\n\nSelecting more than one device adds them all at once, without further questions.\n\nShut down the mobile app before continuing, as its connections to the device will often block Tuya Local communication with it.",
                 "data": {
-                    "device_id": "Device:",
-                    "quick_add": "Add without further questions"
+                    "device_id": "Devices",
+                    "quick_add": "Add without further questions",
+                    "area_id": "Area"
                 }
             },
             "account": {
@@ -104,14 +105,19 @@
             "already_configured": "Ja s'ha afegit un dispositiu amb aquest ID.",
             "not_supported": "No hi ha suport per a aquest dispositiu.",
             "no_devices": "No s'ha pogut trobar cap dispositiu sense registrar per al compte.",
-            "no_discovered_devices": "No unconfigured devices were found. Devices are only found when they are powered on and reachable from Home Assistant. Devices on another subnet or VLAN cannot be heard, so their network needs to be listed under `discovery_networks` in configuration.yaml."
+            "no_discovered_devices": "No unconfigured devices were found. Devices are only found when they are powered on and reachable from Home Assistant. Devices on another subnet or VLAN cannot be heard, so their network needs to be listed under `discovery_networks` in configuration.yaml.",
+            "bulk_added": "Added {added_count} devices: {added}",
+            "bulk_partial": "Added {added_count} devices: {added}\n\nThese were left out because they need to be answered for individually: {skipped}. Add them one at a time.",
+            "bulk_none_added": "None of the selected devices could be added on their own. Add them one at a time so that the missing details can be filled in.",
+            "bulk_needs_attention": "This device needs more information than a bulk add can supply."
         },
         "error": {
             "connection": "No s'ha pogut conectar al vostre dispositiu con esos detalles. Podría ser un problema intermitente, o podrían ser incorrectos. Si seleccionó una versión de protocolo específica, intente 'auto' en su lugar.",
             "needs_hub": "El dispositiu necessita una passarel·la i no se n'ha seleccionat cap.",
             "does_not_need_hub": "El dispositiu no necessita una passarel·la i se n'ha seleccionat una. Reviseu les vostres opcions.",
             "login_error": "Unable to log in. Please check your details and try again.",
-            "no_devices": "No devices were found in that account."
+            "no_devices": "No devices were found in that account.",
+            "no_device_selected": "Select at least one device."
         }
     },
     "title": "Tuya Local",

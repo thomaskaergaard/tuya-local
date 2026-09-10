@@ -12,10 +12,11 @@
             },
             "auto": {
                 "title": "Wykryte urządzenia",
-                "description": "Te urządzenia Tuya zgłaszają się w Twojej sieci lokalnej i nie zostały jeszcze skonfigurowane.\n\nUrządzenia wymienione jako \"Unknown device\" odpowiedziały na własnym porcie, ale urządzenie ujawnia swoją tożsamość tylko temu, kto ma już jego klucz lokalny. Wybranie jednego z nich poprosi o zalogowanie się do konta Tuya, które dostarczy klucz i automatycznie uzupełni resztę.\n\nZamknij aplikację mobilną przed kontynuowaniem, ponieważ jej połączenia z urządzeniem często blokują komunikację Tuya Local.",
+                "description": "Te urządzenia Tuya zgłaszają się w Twojej sieci lokalnej i nie zostały jeszcze skonfigurowane.\n\nUrządzenia wymienione jako \"Unknown device\" odpowiedziały na własnym porcie, ale urządzenie ujawnia swoją tożsamość tylko temu, kto ma już jego klucz lokalny. Wybranie jednego z nich poprosi o zalogowanie się do konta Tuya, które dostarczy klucz i automatycznie uzupełni resztę.\n\nZamknij aplikację mobilną przed kontynuowaniem, ponieważ jej połączenia z urządzeniem często blokują komunikację Tuya Local.\n\nWybranie więcej niż jednego urządzenia dodaje je wszystkie naraz, bez dalszych pytań.",
                 "data": {
-                    "device_id": "Urządzenie:",
-                    "quick_add": "Dodaj bez dalszych pytań"
+                    "device_id": "Urządzenia",
+                    "quick_add": "Dodaj bez dalszych pytań",
+                    "area_id": "Obszar"
                 }
             },
             "account": {
@@ -105,14 +106,19 @@
             "already_configured": "Urządzenie z takim ID już istnieje.",
             "not_supported": "Przepraszam, to urządzenie nie jest wspierane.",
             "no_devices": "Nie udało się znaleźć żadnych niezarejestrowanych urządzeń dla konta.",
-            "no_discovered_devices": "Nie znaleziono nieskonfigurowanych urządzeń. Urządzenia są znajdowane tylko wtedy, gdy są włączone i osiągalne z Home Assistanta. Urządzeń w innej podsieci lub sieci VLAN nie da się usłyszeć, więc ich sieć trzeba wskazać w `discovery_networks` w pliku configuration.yaml."
+            "no_discovered_devices": "Nie znaleziono nieskonfigurowanych urządzeń. Urządzenia są znajdowane tylko wtedy, gdy są włączone i osiągalne z Home Assistanta. Urządzeń w innej podsieci lub sieci VLAN nie da się usłyszeć, więc ich sieć trzeba wskazać w `discovery_networks` w pliku configuration.yaml.",
+            "bulk_added": "Dodano {added_count} urządzeń: {added}",
+            "bulk_partial": "Dodano {added_count} urządzeń: {added}\n\nTe pominięto, ponieważ wymagają osobnych odpowiedzi: {skipped}. Dodaj je pojedynczo.",
+            "bulk_none_added": "Żadnego z wybranych urządzeń nie udało się dodać samodzielnie. Dodaj je pojedynczo, aby uzupełnić brakujące dane.",
+            "bulk_needs_attention": "To urządzenie wymaga więcej informacji, niż może dostarczyć dodawanie zbiorcze."
         },
         "error": {
             "connection": "Nie można podłączyć się do urządzenia z tymi danymi. To może być tymczasowy problem, lub mogą być one nieprawidłowe. Jeśli wybrałeś konkretną wersję protokołu, spróbuj zamiast tego 'auto'.",
             "does_not_need_hub": "Urządzenie nie potrzebuje bramy i taką wybrano. ",
             "needs_hub": "Urządzenie wymaga bramy",
             "login_error": "Nie można się zalogować. Sprawdź dane i spróbuj ponownie.",
-            "no_devices": "Nie znaleziono urządzeń na tym koncie."
+            "no_devices": "Nie znaleziono urządzeń na tym koncie.",
+            "no_device_selected": "Wybierz co najmniej jedno urządzenie."
         }
     },
     "selector": {

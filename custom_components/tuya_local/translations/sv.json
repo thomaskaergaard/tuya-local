@@ -12,10 +12,11 @@
             },
             "auto": {
                 "title": "Upptäckta enheter",
-                "description": "Dessa Tuya-enheter annonserar sig i ditt lokala nätverk och är inte konfigurerade ännu.\n\nEnheter som visas som \"Unknown device\" svarade på sin egen port, men en enhet avslöjar bara sin identitet för någon som redan har dess lokala nyckel. Om du väljer en av dem ombeds du logga in på ditt Tuya-konto, som ger nyckeln och fyller i resten automatiskt.\n\nStäng mobilappen innan du fortsätter, eftersom dess anslutningar till enheten ofta blockerar Tuya Locals kommunikation med den.",
+                "description": "Dessa Tuya-enheter annonserar sig i ditt lokala nätverk och är inte konfigurerade ännu.\n\nEnheter som visas som \"Unknown device\" svarade på sin egen port, men en enhet avslöjar bara sin identitet för någon som redan har dess lokala nyckel. Om du väljer en av dem ombeds du logga in på ditt Tuya-konto, som ger nyckeln och fyller i resten automatiskt.\n\nStäng mobilappen innan du fortsätter, eftersom dess anslutningar till enheten ofta blockerar Tuya Locals kommunikation med den.\n\nVäljer du mer än en enhet läggs alla till på en gång, utan fler frågor.",
                 "data": {
-                    "device_id": "Enhet:",
-                    "quick_add": "Lägg till utan fler frågor"
+                    "device_id": "Enheter",
+                    "quick_add": "Lägg till utan fler frågor",
+                    "area_id": "Område"
                 }
             },
             "account": {
@@ -105,14 +106,19 @@
             "already_configured": "En enhet med det ID:t har redan lagts till.",
             "not_supported": "Tyvärr finns det inget stöd för denna enhet.",
             "no_devices": "Kan inte hitta några oregistrerade enheter för kontot.",
-            "no_discovered_devices": "Inga okonfigurerade enheter hittades. Enheter hittas bara när de är påslagna och nåbara från Home Assistant. Enheter i ett annat subnät eller VLAN kan inte höras, så deras nätverk måste anges under `discovery_networks` i configuration.yaml."
+            "no_discovered_devices": "Inga okonfigurerade enheter hittades. Enheter hittas bara när de är påslagna och nåbara från Home Assistant. Enheter i ett annat subnät eller VLAN kan inte höras, så deras nätverk måste anges under `discovery_networks` i configuration.yaml.",
+            "bulk_added": "Lade till {added_count} enheter: {added}",
+            "bulk_partial": "Lade till {added_count} enheter: {added}\n\nDessa utelämnades eftersom de behöver besvaras var för sig: {skipped}. Lägg till dem en i taget.",
+            "bulk_none_added": "Ingen av de valda enheterna kunde läggas till på egen hand. Lägg till dem en i taget så att det som saknas kan fyllas i.",
+            "bulk_needs_attention": "Den här enheten behöver mer information än en massinläggning kan ge."
         },
         "error": {
             "connection": "Kan inte ansluta till din enhet med dessa uppgifter. Det kan vara ett intermittent problem, eller så kan de vara felaktiga. Om du valde en specifik protokollversion, prova 'auto' istället.",
             "does_not_need_hub": "Enheten behöver ingen gateway och en valdes. Vänligen granska dina val.",
             "needs_hub": "Enheten behöver en gateway och ingen valdes.",
             "login_error": "Det gick inte att logga in. Kontrollera dina uppgifter och försök igen.",
-            "no_devices": "Inga enheter hittades på det kontot."
+            "no_devices": "Inga enheter hittades på det kontot.",
+            "no_device_selected": "Välj minst en enhet."
         }
     },
     "selector": {

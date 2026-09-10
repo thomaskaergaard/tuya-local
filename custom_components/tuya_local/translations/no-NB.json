@@ -12,10 +12,11 @@
             },
             "auto": {
                 "title": "Oppdagede enheter",
-                "description": "Disse Tuya-enhetene annonserer seg i det lokale nettverket ditt og er ikke satt opp ennå.\n\nEnheter som vises som \"Unknown device\" svarte på sin egen port, men en enhet røper bare identiteten sin til noen som allerede har den lokale nøkkelen. Velger du en av dem, blir du bedt om å logge inn på Tuya-kontoen din, som gir nøkkelen og fyller ut resten automatisk.\n\nAvslutt mobilappen før du fortsetter, siden tilkoblingene dens til enheten ofte blokkerer kommunikasjonen til Tuya Local.",
+                "description": "Disse Tuya-enhetene annonserer seg i det lokale nettverket ditt og er ikke satt opp ennå.\n\nEnheter som vises som \"Unknown device\" svarte på sin egen port, men en enhet røper bare identiteten sin til noen som allerede har den lokale nøkkelen. Velger du en av dem, blir du bedt om å logge inn på Tuya-kontoen din, som gir nøkkelen og fyller ut resten automatisk.\n\nAvslutt mobilappen før du fortsetter, siden tilkoblingene dens til enheten ofte blokkerer kommunikasjonen til Tuya Local.\n\nVelger du mer enn én enhet, legges alle til samtidig, uten flere spørsmål.",
                 "data": {
-                    "device_id": "Enhet:",
-                    "quick_add": "Legg til uten flere spørsmål"
+                    "device_id": "Enheter",
+                    "quick_add": "Legg til uten flere spørsmål",
+                    "area_id": "Område"
                 }
             },
             "account": {
@@ -105,14 +106,19 @@
             "already_configured": "En enhet med denne ID-en eksisterer allerede.",
             "not_supported": "Beklager, det er ingen støtte for denne enheten.",
             "no_devices": "Kan ikke finne noen uregistrerte enheter for kontoen.",
-            "no_discovered_devices": "Fant ingen ukonfigurerte enheter. Enheter blir bare funnet når de er slått på og kan nås fra Home Assistant. Enheter i et annet subnett eller VLAN kan ikke høres, så nettverket deres må oppgis under `discovery_networks` i configuration.yaml."
+            "no_discovered_devices": "Fant ingen ukonfigurerte enheter. Enheter blir bare funnet når de er slått på og kan nås fra Home Assistant. Enheter i et annet subnett eller VLAN kan ikke høres, så nettverket deres må oppgis under `discovery_networks` i configuration.yaml.",
+            "bulk_added": "La til {added_count} enheter: {added}",
+            "bulk_partial": "La til {added_count} enheter: {added}\n\nDisse ble utelatt fordi de må besvares hver for seg: {skipped}. Legg dem til én om gangen.",
+            "bulk_none_added": "Ingen av de valgte enhetene kunne legges til på egen hånd. Legg dem til én om gangen slik at det som mangler kan fylles ut.",
+            "bulk_needs_attention": "Denne enheten trenger mer informasjon enn en masseinnlegging kan gi."
         },
         "error": {
             "connection": "Kunne ikke koble til enheten med de angitte detaljene. Det kan være en midlertidig feil, eller feil med detaljene angitt. Hvis du valgte en spesifikk protokollversjon, prøv 'auto' i stedet.",
             "does_not_need_hub": "Enheten trenger ikke en gateway",
             "needs_hub": "Enheten trenger en gateway",
             "login_error": "Klarte ikke å logge inn. Kontroller opplysningene og prøv igjen.",
-            "no_devices": "Fant ingen enheter på den kontoen."
+            "no_devices": "Fant ingen enheter på den kontoen.",
+            "no_device_selected": "Velg minst én enhet."
         }
     },
     "selector": {
