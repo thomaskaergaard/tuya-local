@@ -2,7 +2,7 @@
 
 import pytest
 import voluptuous as vol
-from homeassistant.const import CONF_HOST, CONF_NAME
+from homeassistant.const import CONF_EMAIL, CONF_HOST, CONF_NAME, CONF_PASSWORD
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.exceptions import ConfigEntryNotReady
 from pytest_homeassistant_custom_component.common import MockConfigEntry
@@ -782,7 +782,7 @@ async def test_flow_auto_offers_unidentified_hosts(hass, fake_discovery, mocker)
         {"value": "host:192.168.3.11", "label": "Unknown device (192.168.3.11)"}
     ]
 
-    # Naming it needs a local key, so the account login is asked for.
+    # Naming it needs a local key, so we ask which account holds it.
     mocker.patch.object(
         config_flow,
         "Cloud",
@@ -792,7 +792,22 @@ async def test_flow_auto_offers_unidentified_hosts(hass, fake_discovery, mocker)
         result["flow_id"],
         {CONF_DEVICE_ID: "host:192.168.3.11"},
     )
-    assert result["step_id"] == "cloud"
+    assert result["type"] == FlowResultType.MENU
+    assert result["step_id"] == "account"
+    assert set(result["menu_options"]) == {"cloud", "oem", "manual_entry"}
+
+    # Choosing to fill it in by hand keeps the address that was found.
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {"next_step_id": "manual_entry"},
+    )
+    assert result["step_id"] == "local"
+    defaults = {
+        marker.schema: marker.default()
+        for marker in result["data_schema"].schema
+        if callable(marker.default)
+    }
+    assert defaults[CONF_HOST] == "192.168.3.11"
 
 
 def fake_cloud(mocker, devices, authenticated=True):
@@ -890,6 +905,217 @@ async def test_flow_auto_falls_back_when_the_account_has_no_match(
     }
     assert defaults[CONF_DEVICE_ID] == ""
     assert defaults[CONF_HOST] == "192.168.3.11"
+
+
+def fake_oem_cloud(mocker, devices, error=None):
+    """Build a brand cloud that either signs in or refuses to."""
+    cloud = mocker.MagicMock()
+    cloud.async_login = mocker.AsyncMock(side_effect=error)
+    cloud.async_get_devices = mocker.AsyncMock(return_value=devices)
+    return cloud
+
+
+LEDVANCE_DEVICE = {
+    "id": "ledvanceid",
+    "ip": "",
+    CONF_LOCAL_KEY: TESTKEY,
+    "name": "Kitchen light",
+    "product_id": "prodid",
+    "product_name": "LEDVANCE SMART+",
+    "online": True,
+    "is_hub": False,
+    "sub": False,
+    "node_id": "",
+    "uuid": "",
+}
+
+
+async def _account_menu(hass, mocker):
+    """Get as far as being asked which account holds a scanned device."""
+    mocker.patch.object(config_flow, "DISCOVERY_WAIT", 0)
+    mocker.patch.object(
+        config_flow,
+        "Cloud",
+        return_value=fake_cloud(mocker, {}, authenticated=False),
+    )
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": "user"},
+        data={"setup_mode": "auto"},
+    )
+    return await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {CONF_DEVICE_ID: "host:192.168.3.11"},
+    )
+
+
+@pytest.mark.asyncio
+async def test_brand_login_identifies_a_scanned_device(hass, fake_discovery, mocker):
+    """A LEDVANCE device is named by the keys of the LEDVANCE account."""
+    fake_discovery.unidentified = ["192.168.3.11"]
+    result = await _account_menu(hass, mocker)
+
+    mocker.patch.object(
+        config_flow,
+        "OemCloud",
+        return_value=fake_oem_cloud(mocker, {"ledvanceid": LEDVANCE_DEVICE}),
+    )
+    mocker.patch(
+        "custom_components.tuya_local.discovery.identify_host",
+        return_value=DiscoveredDevice(
+            device_id="ledvanceid",
+            ip="192.168.3.11",
+            version="3.4",
+        ),
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {"next_step_id": "oem"},
+    )
+    assert result["step_id"] == "oem"
+
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {
+            "brand": "ledvance",
+            "region": "eu",
+            CONF_EMAIL: "me@example.com",
+            CONF_PASSWORD: "hunter2",
+        },
+    )
+    assert result["step_id"] == "local"
+    defaults = {
+        marker.schema: marker.default()
+        for marker in result["data_schema"].schema
+        if callable(marker.default)
+    }
+    assert defaults[CONF_DEVICE_ID] == "ledvanceid"
+    assert defaults[CONF_HOST] == "192.168.3.11"
+    assert defaults[CONF_LOCAL_KEY] == TESTKEY
+    assert defaults[CONF_PROTOCOL_VERSION] == "3.4"
+
+    # The keys are kept, so discovery can name these devices unaided later.
+    cache = await async_get_cache(hass)
+    assert cache.get_local_key("ledvanceid") == TESTKEY
+
+
+@pytest.mark.asyncio
+async def test_brand_login_reports_bad_credentials(hass, fake_discovery, mocker):
+    """A refused login has to be correctable rather than fatal."""
+    fake_discovery.unidentified = ["192.168.3.11"]
+    result = await _account_menu(hass, mocker)
+    mocker.patch.object(
+        config_flow,
+        "OemCloud",
+        return_value=fake_oem_cloud(
+            mocker,
+            {},
+            error=config_flow.OemCloudAuthError("wrong"),
+        ),
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {"next_step_id": "oem"},
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {
+            "brand": "ledvance",
+            "region": "eu",
+            CONF_EMAIL: "me@example.com",
+            CONF_PASSWORD: "wrong",
+        },
+    )
+    assert result["step_id"] == "oem"
+    assert result["errors"] == {"base": "login_error"}
+
+
+@pytest.mark.asyncio
+async def test_brand_login_reports_an_empty_account(hass, fake_discovery, mocker):
+    """Signing in to the wrong region finds nothing, which needs saying."""
+    fake_discovery.unidentified = ["192.168.3.11"]
+    result = await _account_menu(hass, mocker)
+    mocker.patch.object(
+        config_flow,
+        "OemCloud",
+        return_value=fake_oem_cloud(mocker, {}),
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {"next_step_id": "oem"},
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {
+            "brand": "ledvance",
+            "region": "us",
+            CONF_EMAIL: "me@example.com",
+            CONF_PASSWORD: "hunter2",
+        },
+    )
+    assert result["step_id"] == "oem"
+    assert result["errors"] == {"base": "no_devices"}
+
+
+@pytest.mark.asyncio
+async def test_brand_setup_mode_lists_the_account_devices(hass, mocker):
+    """A brand account can be used without discovery finding anything."""
+    mocker.patch.object(
+        config_flow,
+        "OemCloud",
+        return_value=fake_oem_cloud(mocker, {"ledvanceid": LEDVANCE_DEVICE}),
+    )
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": "user"},
+        data={"setup_mode": "oem"},
+    )
+    assert result["step_id"] == "oem"
+
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {
+            "brand": "ledvance",
+            "region": "eu",
+            CONF_EMAIL: "me@example.com",
+            CONF_PASSWORD: "hunter2",
+        },
+    )
+    assert result["step_id"] == "choose_device"
+    options = result["data_schema"].schema["device_id"].config["options"]
+    assert options == [
+        {"value": "ledvanceid", "label": "Kitchen light (LEDVANCE SMART+)"}
+    ]
+
+
+@pytest.mark.asyncio
+async def test_brand_device_does_not_ask_for_a_gateway(hass, mocker):
+    """A brand cloud says whether a device is behind a gateway, so believe it."""
+    mocker.patch.object(
+        config_flow,
+        "OemCloud",
+        return_value=fake_oem_cloud(mocker, {"ledvanceid": dict(LEDVANCE_DEVICE)}),
+    )
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": "user"},
+        data={"setup_mode": "oem"},
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {
+            "brand": "ledvance",
+            "region": "eu",
+            CONF_EMAIL: "me@example.com",
+            CONF_PASSWORD: "hunter2",
+        },
+    )
+    # An empty address would otherwise be read as needing a gateway.
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {"device_id": "ledvanceid", "hub_id": "None"},
+    )
+    assert result["step_id"] == "search"
 
 
 @pytest.mark.asyncio

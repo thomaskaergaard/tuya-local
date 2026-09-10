@@ -11,7 +11,7 @@ from homeassistant.config_entries import (
     ConfigFlow,
     OptionsFlow,
 )
-from homeassistant.const import CONF_HOST, CONF_NAME
+from homeassistant.const import CONF_EMAIL, CONF_HOST, CONF_NAME, CONF_PASSWORD
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.selector import (
@@ -45,6 +45,13 @@ from .device import TuyaLocalDevice
 from .helpers.config import get_device_id
 from .helpers.device_config import get_config
 from .helpers.log import log_json
+from .oem_cloud import (
+    DEFAULT_REGION,
+    OEM_BRANDS,
+    OEM_REGIONS,
+    OemCloud,
+    OemCloudAuthError,
+)
 
 _LOGGER = logging.getLogger(__name__)
 DEVICE_DETAILS_URL = (
@@ -173,6 +180,8 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
                     _LOGGER.warning("Connection test failed with %s %s", type(e), e)
                     _LOGGER.warning("Re-authentication is required.")
                 return await self.async_step_cloud()
+            if mode == "oem":
+                return await self.async_step_oem()
             if mode == "manual":
                 return await self.async_step_local()
 
@@ -180,7 +189,13 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
         fields: OrderedDict[vol.Marker, Any] = OrderedDict()
         fields[vol.Required("setup_mode")] = SelectSelector(
             SelectSelectorConfig(
-                options=["auto", "cloud", "manual", "cloud_fresh_login"],
+                options=[
+                    "auto",
+                    "cloud",
+                    "oem",
+                    "manual",
+                    "cloud_fresh_login",
+                ],
                 mode=SelectSelectorMode.LIST,
                 translation_key="setup_mode",
             )
@@ -323,8 +338,9 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
         """
         await self.async_init_cloud()
         if not self.cloud.is_authenticated:
-            # The login lands back here, because a host is pending.
-            return await self.async_step_cloud()
+            # Not every Tuya device is in the SmartLife app, so ask which
+            # account holds it rather than assuming.
+            return await self.async_step_account()
 
         if not self.__cloud_devices:
             try:
@@ -333,6 +349,100 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
                 _LOGGER.warning("Could not fetch devices from the cloud: %s", e)
 
         return await self._async_identified_device()
+
+    async def async_step_account(self, user_input=None):
+        """Ask which account holds a device that was found by scanning."""
+        return self.async_show_menu(
+            step_id="account",
+            menu_options=["cloud", "oem", "manual_entry"],
+        )
+
+    async def async_step_manual_entry(self, user_input=None):
+        """Fill in a scanned device by hand, without any cloud account."""
+        self.__cloud_device = {
+            "id": "",
+            "ip": self.__pending_host or "",
+            CONF_LOCAL_KEY: "",
+        }
+        self.__pending_host = None
+        return await self.async_step_local()
+
+    async def async_step_oem(self, user_input=None):
+        """Sign in to the cloud behind a rebranded Tuya app.
+
+        Brands such as LEDVANCE ship their own app, so their devices are
+        invisible to a SmartLife login and need the brand's own account.
+        """
+        errors = {}
+        if user_input is not None:
+            cloud = OemCloud(
+                self.hass,
+                user_input["brand"],
+                user_input["region"],
+            )
+            try:
+                await cloud.async_login(
+                    user_input[CONF_EMAIL],
+                    user_input[CONF_PASSWORD],
+                )
+                devices = await cloud.async_get_devices()
+            except OemCloudAuthError:
+                errors["base"] = "login_error"
+            except Exception as e:
+                _LOGGER.warning("Brand cloud login failed with %s %s", type(e), e)
+                errors["base"] = "login_error"
+            else:
+                if not devices:
+                    errors["base"] = "no_devices"
+                else:
+                    # Cached so that discovery can name these devices later
+                    # without asking for the password again.
+                    cache = await async_get_cache(self.hass)
+                    await cache.async_update_devices(devices)
+                    self.__cloud_devices = {**self.__cloud_devices, **devices}
+                    if self.__pending_host:
+                        return await self._async_identified_device()
+                    return await self.async_step_choose_device()
+
+        if user_input is None:
+            user_input = {}
+
+        return self.async_show_form(
+            step_id="oem",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(
+                        "brand",
+                        default=user_input.get("brand", "ledvance"),
+                    ): SelectSelector(
+                        SelectSelectorConfig(
+                            options=[
+                                SelectOptionDict(value=brand, label=info["name"])
+                                for brand, info in OEM_BRANDS.items()
+                            ],
+                            mode=SelectSelectorMode.DROPDOWN,
+                        )
+                    ),
+                    vol.Required(
+                        "region",
+                        default=user_input.get("region", DEFAULT_REGION),
+                    ): SelectSelector(
+                        SelectSelectorConfig(
+                            options=list(OEM_REGIONS),
+                            mode=SelectSelectorMode.DROPDOWN,
+                            translation_key="region",
+                        )
+                    ),
+                    vol.Required(
+                        CONF_EMAIL,
+                        default=user_input.get(CONF_EMAIL, ""),
+                    ): str,
+                    vol.Required(CONF_PASSWORD): str,
+                }
+            ),
+            errors=errors,
+            last_step=False,
+        )
 
     async def _async_identified_device(self):
         """Match the pending address against the keys of the cloud account."""
@@ -468,7 +578,15 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             device_choice = self.__cloud_devices[user_input["device_id"]]
 
-            if device_choice["ip"] != "":
+            # A cloud account reports the WAN address, which tells us nothing
+            # except that the device answers for itself rather than through a
+            # gateway. Brand clouds say so directly instead.
+            if "sub" in device_choice:
+                directly_addable = not device_choice["sub"]
+            else:
+                directly_addable = device_choice["ip"] != ""
+
+            if directly_addable:
                 # This is a directly addable device.
                 if user_input["hub_id"] == "None":
                     device_choice["ip"] = ""

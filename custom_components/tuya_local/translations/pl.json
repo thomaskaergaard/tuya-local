@@ -17,6 +17,25 @@
                     "device_id": "Urządzenie:"
                 }
             },
+            "account": {
+                "title": "Gdzie zarejestrowane jest to urządzenie?",
+                "description": "Urządzenie ujawnia, czym jest, tylko temu, kto ma już jego klucz lokalny, więc klucz musi pochodzić z konta, z którym jest sparowane.\n\nWybierz aplikację, w której je skonfigurowano.",
+                "menu_options": {
+                    "cloud": "Aplikacja SmartLife lub Tuya",
+                    "oem": "Aplikacja LEDVANCE, SYLVANIA lub innej marki",
+                    "manual_entry": "Samodzielnie podam id urządzenia i klucz lokalny"
+                }
+            },
+            "oem": {
+                "title": "Zaloguj się na konto marki",
+                "description": "Niektóre marki udostępniają własną aplikację zamiast SmartLife, a ich urządzenia nie są widoczne po zalogowaniu do SmartLife. Podaj adres e-mail i hasło używane w aplikacji marki.\n\nRegion musi być tym, w którym utworzono konto.",
+                "data": {
+                    "brand": "Marka:",
+                    "region": "Region:",
+                    "email": "Adres e-mail:",
+                    "password": "Hasło:"
+                }
+            },
             "discovery_confirm": {
                 "title": "Dodaj wykryte urządzenie",
                 "description": "{device_name}W Twojej sieci znaleziono urządzenie Tuya.\n\nIdentyfikator urządzenia: `{device_id}`\nAdres IP: `{host}`\n\nUrządzenia wymienione jako \"Unknown device\" odpowiedziały na własnym porcie, ale urządzenie ujawnia swoją tożsamość tylko temu, kto ma już jego klucz lokalny. Wybranie jednego z nich poprosi o zalogowanie się do konta Tuya, które dostarczy klucz i automatycznie uzupełni resztę.\n\nZamknij aplikację mobilną przed kontynuowaniem, ponieważ jej połączenia z urządzeniem często blokują komunikację Tuya Local."
@@ -87,7 +106,9 @@
         "error": {
             "connection": "Nie można podłączyć się do urządzenia z tymi danymi. To może być tymczasowy problem, lub mogą być one nieprawidłowe. Jeśli wybrałeś konkretną wersję protokołu, spróbuj zamiast tego 'auto'.",
             "does_not_need_hub": "Urządzenie nie potrzebuje bramy i taką wybrano. ",
-            "needs_hub": "Urządzenie wymaga bramy"
+            "needs_hub": "Urządzenie wymaga bramy",
+            "login_error": "Nie można się zalogować. Sprawdź dane i spróbuj ponownie.",
+            "no_devices": "Nie znaleziono urządzeń na tym koncie."
         }
     },
     "selector": {
@@ -95,8 +116,16 @@
             "options": {
                 "auto": "Automatycznie wykrywaj urządzenia w sieci lokalnej.",
                 "cloud": "Konfiguracja urządzenia SmartLife wspomagana chmurą.",
+                "oem": "Konfiguracja z pomocą chmury LEDVANCE lub innej marki.",
                 "manual": "Ręcznie podaj informacje o połączeniu urządzenia.",
                 "cloud_fresh_login": "Konfiguracja urządzenia SmartLife wspomagana chmurą (świeże logowanie)."
+            }
+        },
+        "region": {
+            "options": {
+                "eu": "Europa",
+                "us": "Ameryka",
+                "cn": "Chiny"
             }
         }
     },

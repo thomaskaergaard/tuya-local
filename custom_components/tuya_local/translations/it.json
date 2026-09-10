@@ -17,6 +17,25 @@
                     "device_id": "Dispositivo:"
                 }
             },
+            "account": {
+                "title": "Dove è registrato questo dispositivo?",
+                "description": "Un dispositivo rivela ciò che è solo a chi possiede già la sua chiave locale, quindi la chiave deve provenire dall'account a cui è associato.\n\nScegli l'app con cui l'hai configurato.",
+                "menu_options": {
+                    "cloud": "App SmartLife o Tuya",
+                    "oem": "App LEDVANCE, SYLVANIA o di un'altra marca",
+                    "manual_entry": "Inserire io stesso l'id del dispositivo e la chiave locale"
+                }
+            },
+            "oem": {
+                "title": "Accedi all'account della marca",
+                "description": "Alcune marche forniscono la propria app invece di SmartLife, e i loro dispositivi non sono visibili con un accesso SmartLife. Inserisci l'indirizzo email e la password dell'app della marca.\n\nLa regione deve essere quella in cui è stato creato l'account.",
+                "data": {
+                    "brand": "Marca:",
+                    "region": "Regione:",
+                    "email": "Indirizzo email:",
+                    "password": "Password:"
+                }
+            },
             "discovery_confirm": {
                 "title": "Aggiungi il dispositivo rilevato",
                 "description": "{device_name}È stato trovato un dispositivo Tuya nella tua rete.\n\nID dispositivo: `{device_id}`\nIndirizzo IP: `{host}`\n\nI dispositivi elencati come \"Unknown device\" hanno risposto sulla propria porta, ma un dispositivo rivela la propria identità solo a chi possiede già la sua chiave locale. Sceglierne uno ti chiederà di accedere al tuo account Tuya, che fornisce la chiave e compila automaticamente il resto.\n\nChiudi l'app mobile prima di continuare, poiché le sue connessioni al dispositivo spesso bloccano la comunicazione di Tuya Local."
@@ -87,7 +106,9 @@
         "error": {
             "connection": "Impossibile connettersi al dispositivo con quei dettagli. Potrebbe essere un problema intermittente o potrebbero essere errati. Se hai selezionato una versione specifica del protocollo, prova invece 'auto'.",
             "does_not_need_hub": "Il dispositivo non necessita di un gateway e ne è stato selezionato uno. ",
-            "needs_hub": "Il dispositivo necessita di un gateway e non ne è stato selezionato nessuno."
+            "needs_hub": "Il dispositivo necessita di un gateway e non ne è stato selezionato nessuno.",
+            "login_error": "Impossibile accedere. Controlla i tuoi dati e riprova.",
+            "no_devices": "Nessun dispositivo trovato in quell'account."
         }
     },
     "selector": {
@@ -95,8 +116,16 @@
             "options": {
                 "auto": "Rileva automaticamente i dispositivi sulla rete locale.",
                 "cloud": "Configurazione del dispositivo SmartLife assistita da cloud.",
+                "oem": "Configurazione assistita dal cloud di LEDVANCE o di un'altra marca.",
                 "manual": "Inserisci manualmente le informazioni sulla connessione del dispositivo.",
                 "cloud_fresh_login": "Configurazione del dispositivo SmartLife assistita da cloud con accesso fresco."
+            }
+        },
+        "region": {
+            "options": {
+                "eu": "Europa",
+                "us": "America",
+                "cn": "Cina"
             }
         }
     },

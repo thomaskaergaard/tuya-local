@@ -17,6 +17,25 @@
                     "device_id": "Appareil :"
                 }
             },
+            "account": {
+                "title": "Où cet appareil est-il enregistré ?",
+                "description": "Un appareil ne révèle ce qu'il est qu'à celui qui possède déjà sa clé locale ; la clé doit donc venir du compte auquel il est associé.\n\nChoisissez l'application dans laquelle vous l'avez configuré.",
+                "menu_options": {
+                    "cloud": "Application SmartLife ou Tuya",
+                    "oem": "Application LEDVANCE, SYLVANIA ou d'une autre marque",
+                    "manual_entry": "Saisir moi-même l'identifiant et la clé locale"
+                }
+            },
+            "oem": {
+                "title": "Connexion à votre compte de marque",
+                "description": "Certaines marques proposent leur propre application plutôt que SmartLife, et leurs appareils sont invisibles depuis une connexion SmartLife. Saisissez l'adresse e-mail et le mot de passe de l'application de la marque.\n\nLa région doit être celle dans laquelle le compte a été créé.",
+                "data": {
+                    "brand": "Marque :",
+                    "region": "Région :",
+                    "email": "Adresse e-mail :",
+                    "password": "Mot de passe :"
+                }
+            },
             "discovery_confirm": {
                 "title": "Ajouter l'appareil découvert",
                 "description": "{device_name}Un appareil Tuya a été trouvé sur votre réseau.\n\nIdentifiant de l'appareil : `{device_id}`\nAdresse IP : `{host}`\n\nLes appareils affichés comme \"Unknown device\" ont répondu sur leur propre port, mais un appareil ne révèle son identité qu'à celui qui possède déjà sa clé locale. En choisir un vous demandera de vous connecter à votre compte Tuya, qui fournit la clé et remplit le reste automatiquement.\n\nFermez l'application mobile avant de continuer, car ses connexions à l'appareil bloquent souvent la communication de Tuya Local."
@@ -87,7 +106,9 @@
         "error": {
             "connection": "Impossible de se connecter à votre appareil avec ces détails. Il peut s'agir d'un problème intermittent, ou ils peuvent être incorrects. Si vous avez sélectionné une version de protocole spécifique, essayez 'auto' à la place.",
             "does_not_need_hub": "L'appareil n'a pas besoin de passerelle et une a été sélectionnée. ",
-            "needs_hub": "L'appareil a besoin d'une passerelle et aucune n'a été sélectionnée."
+            "needs_hub": "L'appareil a besoin d'une passerelle et aucune n'a été sélectionnée.",
+            "login_error": "Connexion impossible. Vérifiez vos informations et réessayez.",
+            "no_devices": "Aucun appareil trouvé dans ce compte."
         }
     },
     "selector": {
@@ -95,8 +116,16 @@
             "options": {
                 "auto": "Découvrir automatiquement les appareils sur le réseau local.",
                 "cloud": "Configuration de l'appareil assistée par le cloud SmartLife.",
+                "oem": "Configuration assistée par le cloud LEDVANCE ou d'une autre marque.",
                 "manual": "Fournissez manuellement les informations de connexion de l’appareil.",
                 "cloud_fresh_login": "Configuration de l'appareil assistée par le cloud SmartLife (nouvelle connexion)."
+            }
+        },
+        "region": {
+            "options": {
+                "eu": "Europe",
+                "us": "Amérique",
+                "cn": "Chine"
             }
         }
     },

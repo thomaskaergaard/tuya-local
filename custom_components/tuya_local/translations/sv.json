@@ -17,6 +17,25 @@
                     "device_id": "Enhet:"
                 }
             },
+            "account": {
+                "title": "Var är den här enheten registrerad?",
+                "description": "En enhet avslöjar bara vad den är för någon som redan har dess lokala nyckel, så nyckeln måste komma från kontot som enheten är kopplad till.\n\nVälj appen du konfigurerade den i.",
+                "menu_options": {
+                    "cloud": "SmartLife- eller Tuya-appen",
+                    "oem": "LEDVANCE, SYLVANIA eller en annan varumärkesapp",
+                    "manual_entry": "Ange enhets-id och lokal nyckel själv"
+                }
+            },
+            "oem": {
+                "title": "Logga in på ditt varumärkeskonto",
+                "description": "Vissa varumärken har en egen app i stället för SmartLife, och deras enheter syns inte vid en SmartLife-inloggning. Ange e-postadressen och lösenordet du använder i varumärkets egen app.\n\nRegionen måste vara den som kontot skapades i.",
+                "data": {
+                    "brand": "Varumärke:",
+                    "region": "Region:",
+                    "email": "E-postadress:",
+                    "password": "Lösenord:"
+                }
+            },
             "discovery_confirm": {
                 "title": "Lägg till upptäckt enhet",
                 "description": "{device_name}En Tuya-enhet hittades i ditt nätverk.\n\nEnhets-ID: `{device_id}`\nIP-adress: `{host}`\n\nEnheter som visas som \"Unknown device\" svarade på sin egen port, men en enhet avslöjar bara sin identitet för någon som redan har dess lokala nyckel. Om du väljer en av dem ombeds du logga in på ditt Tuya-konto, som ger nyckeln och fyller i resten automatiskt.\n\nStäng mobilappen innan du fortsätter, eftersom dess anslutningar till enheten ofta blockerar Tuya Locals kommunikation med den."
@@ -87,7 +106,9 @@
         "error": {
             "connection": "Kan inte ansluta till din enhet med dessa uppgifter. Det kan vara ett intermittent problem, eller så kan de vara felaktiga. Om du valde en specifik protokollversion, prova 'auto' istället.",
             "does_not_need_hub": "Enheten behöver ingen gateway och en valdes. Vänligen granska dina val.",
-            "needs_hub": "Enheten behöver en gateway och ingen valdes."
+            "needs_hub": "Enheten behöver en gateway och ingen valdes.",
+            "login_error": "Det gick inte att logga in. Kontrollera dina uppgifter och försök igen.",
+            "no_devices": "Inga enheter hittades på det kontot."
         }
     },
     "selector": {
@@ -95,8 +116,16 @@
             "options": {
                 "auto": "Upptäck enheter automatiskt i det lokala nätverket.",
                 "cloud": "SmartLife cloud-assisterad enhetskonfiguration.",
+                "oem": "Molnassisterad enhetskonfiguration för LEDVANCE eller andra varumärken.",
                 "manual": "Ange enhetsanslutningsinformation manuellt.",
                 "cloud_fresh_login": "SmartLife cloud-assisterad enhetskonfiguration med ny inloggning."
+            }
+        },
+        "region": {
+            "options": {
+                "eu": "Europa",
+                "us": "Amerika",
+                "cn": "Kina"
             }
         }
     },

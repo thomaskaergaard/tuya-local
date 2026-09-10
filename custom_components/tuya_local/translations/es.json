@@ -17,6 +17,25 @@
                     "device_id": "Dispositivo:"
                 }
             },
+            "account": {
+                "title": "¿Dónde está registrado este dispositivo?",
+                "description": "Un dispositivo solo revela lo que es a quien ya posee su clave local, así que la clave tiene que venir de la cuenta con la que está vinculado.\n\nElige la aplicación en la que lo configuraste.",
+                "menu_options": {
+                    "cloud": "Aplicación SmartLife o Tuya",
+                    "oem": "Aplicación de LEDVANCE, SYLVANIA u otra marca",
+                    "manual_entry": "Introducir yo mismo el id del dispositivo y la clave local"
+                }
+            },
+            "oem": {
+                "title": "Inicia sesión en la cuenta de la marca",
+                "description": "Algunas marcas ofrecen su propia aplicación en lugar de SmartLife, y sus dispositivos no se ven al iniciar sesión en SmartLife. Introduce el correo electrónico y la contraseña que usas en la aplicación de la marca.\n\nLa región debe ser aquella en la que se creó la cuenta.",
+                "data": {
+                    "brand": "Marca:",
+                    "region": "Región:",
+                    "email": "Correo electrónico:",
+                    "password": "Contraseña:"
+                }
+            },
             "discovery_confirm": {
                 "title": "Añadir dispositivo descubierto",
                 "description": "{device_name}Se ha encontrado un dispositivo Tuya en tu red.\n\nID del dispositivo: `{device_id}`\nDirección IP: `{host}`\n\nLos dispositivos que aparecen como \"Unknown device\" respondieron en su propio puerto, pero un dispositivo solo revela su identidad a quien ya posee su clave local. Al elegir uno se te pedirá que inicies sesión en tu cuenta Tuya, que aporta la clave y completa el resto automáticamente.\n\nCierra la aplicación móvil antes de continuar, ya que sus conexiones con el dispositivo suelen bloquear la comunicación de Tuya Local."
@@ -87,7 +106,9 @@
         "error": {
             "connection": "No se puede conectar a su dispositivo con esos detalles. Podría ser un problema intermitente, o pueden ser incorrectos. Si seleccionó una versión de protocolo específica, pruebe 'auto' en su lugar.",
             "does_not_need_hub": "El dispositivo no necesita una puerta de enlace y se seleccionó una. ",
-            "needs_hub": "El dispositivo necesita una puerta de enlace y no se seleccionó ninguna."
+            "needs_hub": "El dispositivo necesita una puerta de enlace y no se seleccionó ninguna.",
+            "login_error": "No se ha podido iniciar sesión. Comprueba tus datos e inténtalo de nuevo.",
+            "no_devices": "No se han encontrado dispositivos en esa cuenta."
         }
     },
     "selector": {
@@ -95,8 +116,16 @@
             "options": {
                 "auto": "Descubrir dispositivos automáticamente en la red local.",
                 "cloud": "Configuración del dispositivo asistida por la nube SmartLife.",
+                "oem": "Configuración asistida por la nube de LEDVANCE u otra marca.",
                 "manual": "Proporcione manualmente información de conexión del dispositivo.",
                 "cloud_fresh_login": "Configuración del dispositivo asistida por la nube SmartLife con inicio de sesión fresco."
+            }
+        },
+        "region": {
+            "options": {
+                "eu": "Europa",
+                "us": "América",
+                "cn": "China"
             }
         }
     },

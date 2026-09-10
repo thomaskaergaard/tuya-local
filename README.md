@@ -90,11 +90,24 @@ tuya_local:
 
 Each entry may be a single address or a CIDR range, and a range is limited to 1024 addresses. A whole `/24` takes about ten seconds to search. It is searched when the automatic setup choice is used, and every five minutes in the background so that devices which change address are repaired.
 
-A device only identifies itself to someone who already holds its local key, so devices found this way are named once you have logged in to the cloud, and are otherwise offered as "Unknown device" with just their address. Choosing an unknown device asks you to sign in to your Tuya account, and the keys from the account are then tried against that address, so the device id, local key and protocol version are filled in for you. Only if nothing in the account answers do you have to enter them by hand. The cloud assisted flow also searches these networks, so choosing a device from your Tuya account will find it on another VLAN without you needing to know its address.
-
-Note that discovery only works if the devices are on the same subnet as Home Assistant, as broadcasts are not usually forwarded between subnets.
+A device only identifies itself to someone who already holds its local key, so devices found this way are named once you have logged in to the cloud, and are otherwise offered as "Unknown device" with just their address. Choosing an unknown device asks which account it is registered in, and the keys from that account are then tried against the address, so the device id, local key and protocol version are filled in for you. Only if nothing in the account answers do you have to enter them by hand. The cloud assisted flow also searches these networks, so choosing a device from your Tuya account will find it on another VLAN without you needing to know its address.
 
 Home Assistant only loads the integration once it has at least one device, so discovery begins after your first device has been added manually or through the cloud assisted flow.
+
+### Devices sold under another brand
+
+Some manufacturers ship their own app instead of SmartLife, so their devices never appear in a Tuya developer account and the SmartLife login cannot see them. Their apps talk to the same Tuya service, distinguished only by the brand's own credentials, so signing in with the brand account gives the local keys for those devices.
+
+Choose "LEDVANCE or other brand cloud-assisted device setup", or pick the brand when a discovered device asks which account it is registered in, then enter the email address and password of the brand's app. The region has to be the one the account was created in.
+
+The following brands are supported:
+
+- LEDVANCE SMART+
+- SYLVANIA Smart
+
+The keys are cached, so devices from these accounts are named by discovery from then on. The password is not stored, which means these keys are not refreshed automatically the way SmartLife keys are; sign in again if a device is reset or re-paired.
+
+The description of this interface was published by [FlagX](https://github.com/FlagX/ha-ledvance-tuya-resync-localkey) under the MIT licence.
 
 ### Local key refresh
 

@@ -17,6 +17,25 @@
                     "device_id": "Gerät:"
                 }
             },
+            "account": {
+                "title": "Wo ist dieses Gerät registriert?",
+                "description": "Ein Gerät verrät nur dem, der bereits seinen lokalen Schlüssel besitzt, was es ist. Der Schlüssel muss also aus dem Konto kommen, mit dem das Gerät gekoppelt ist.\n\nWähle die App, in der du das Gerät eingerichtet hast.",
+                "menu_options": {
+                    "cloud": "SmartLife- oder Tuya-App",
+                    "oem": "LEDVANCE, SYLVANIA oder eine andere Marken-App",
+                    "manual_entry": "Geräte-ID und lokalen Schlüssel selbst eingeben"
+                }
+            },
+            "oem": {
+                "title": "Bei deinem Markenkonto anmelden",
+                "description": "Manche Marken liefern eine eigene App statt SmartLife, und ihre Geräte sind über eine SmartLife-Anmeldung nicht sichtbar. Gib die E-Mail-Adresse und das Passwort der App der Marke ein.\n\nDie Region muss die sein, in der das Konto angelegt wurde.",
+                "data": {
+                    "brand": "Marke:",
+                    "region": "Region:",
+                    "email": "E-Mail-Adresse:",
+                    "password": "Passwort:"
+                }
+            },
             "discovery_confirm": {
                 "title": "Gefundenes Gerät hinzufügen",
                 "description": "{device_name}Ein Tuya-Gerät wurde in deinem Netzwerk gefunden.\n\nGeräte-ID: `{device_id}`\nIP-Adresse: `{host}`\n\nAls \"Unknown device\" aufgeführte Geräte haben auf ihrem eigenen Port geantwortet, aber ein Gerät gibt seine Identität nur an jemanden preis, der bereits seinen lokalen Schlüssel besitzt. Wenn du eines auswählst, wirst du zur Anmeldung bei deinem Tuya-Konto aufgefordert, das den Schlüssel liefert und den Rest automatisch ausfüllt.\n\nBeende die mobile App, bevor du fortfährst, da ihre Verbindungen zum Gerät die Kommunikation von Tuya Local oft blockieren."
@@ -87,7 +106,9 @@
         "error": {
             "connection": "Mit diesen Angaben kann keine Verbindung zu Ihrem Gerät hergestellt werden. Es könnte sich um ein intermittierendes Problem handeln, oder die Angaben sind falsch. Wenn Sie eine bestimmte Protokollversion ausgewählt haben, versuchen Sie stattdessen 'auto'.",
             "does_not_need_hub": "Das Gerät benötigt kein Gateway und es wurde eines ausgewählt. ",
-            "needs_hub": "Das Gerät benötigt ein Gateway und es wurde keines ausgewählt."
+            "needs_hub": "Das Gerät benötigt ein Gateway und es wurde keines ausgewählt.",
+            "login_error": "Anmeldung nicht möglich. Bitte überprüfe deine Angaben und versuche es erneut.",
+            "no_devices": "In diesem Konto wurden keine Geräte gefunden."
         }
     },
     "selector": {
@@ -95,8 +116,16 @@
             "options": {
                 "auto": "Geräte automatisch im lokalen Netzwerk finden.",
                 "cloud": "Cloud-gestützte Geräteeinrichtung von SmartLife.",
+                "oem": "Cloud-gestützte Geräteeinrichtung für LEDVANCE oder andere Marken.",
                 "manual": "Geben Sie manuell Informationen zur Geräteverbindung an.",
                 "cloud_fresh_login": "Cloud-gestützte Geräteeinrichtung von SmartLife mit einem frischen Login."
+            }
+        },
+        "region": {
+            "options": {
+                "eu": "Europa",
+                "us": "Amerika",
+                "cn": "China"
             }
         }
     },
