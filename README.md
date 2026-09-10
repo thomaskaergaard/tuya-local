@@ -73,6 +73,8 @@ Tuya devices announce themselves on the local network, and the integration liste
 
 Discovery listens on UDP ports 6666, 6667 and 7000. If another application on the same host is already using those ports, discovery is skipped and everything else continues to work as before.
 
+Protocol 3.1 to 3.4 devices announce themselves unprompted, but 3.5 devices stay silent until they are asked, so a discovery request is also broadcast when Home Assistant starts, once a minute afterwards, and whenever the automatic setup choice is used.
+
 Note that discovery only works if the devices are on the same subnet as Home Assistant, as broadcasts are not usually forwarded between subnets.
 
 Home Assistant only loads the integration once it has at least one device, so discovery begins after your first device has been added manually or through the cloud assisted flow.

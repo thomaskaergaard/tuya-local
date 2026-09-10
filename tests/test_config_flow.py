@@ -640,6 +640,10 @@ def fake_discovery(hass, mocker):
     class FakeDiscovery:
         def __init__(self):
             self.devices = {}
+            self.requests = 0
+
+        async def async_request_devices(self):
+            self.requests += 1
 
     discovery = FakeDiscovery()
     hass.data.setdefault(DOMAIN, {})[DATA_DISCOVERY] = discovery

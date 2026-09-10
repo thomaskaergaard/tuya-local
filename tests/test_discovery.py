@@ -193,6 +193,39 @@ async def test_discovery_failure_is_not_fatal(mocker, hass):
 
 
 @pytest.mark.asyncio
+async def test_discovery_probes_for_silent_devices(mocker, hass):
+    """Protocol 3.5 devices only answer when asked, so a request is sent."""
+    mocker.patch.object(
+        hass.loop,
+        "create_datagram_endpoint",
+        return_value=(mocker.MagicMock(), mocker.MagicMock()),
+    )
+    request = mocker.patch(
+        "custom_components.tuya_local.discovery.send_discovery_request"
+    )
+    discovery = TuyaLocalDiscovery(mocker.AsyncMock())
+    await discovery.async_start()
+    await asyncio.sleep(0)
+    await asyncio.sleep(0)
+
+    assert request.call_count == 1
+    assert discovery._probe_task is not None
+    discovery.async_stop()
+    assert discovery._probe_task is None
+
+
+@pytest.mark.asyncio
+async def test_probe_failure_is_not_fatal(mocker, hass):
+    """A network that cannot broadcast must not break passive discovery."""
+    mocker.patch(
+        "custom_components.tuya_local.discovery.send_discovery_request",
+        side_effect=OSError("no broadcast route"),
+    )
+    discovery = TuyaLocalDiscovery(mocker.AsyncMock())
+    await discovery.async_request_devices()
+
+
+@pytest.mark.asyncio
 async def test_discovery_offers_new_device(hass):
     """An unknown device should present a confirmation step."""
     result = await hass.config_entries.flow.async_init(

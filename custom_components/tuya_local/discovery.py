@@ -14,12 +14,18 @@ from dataclasses import dataclass
 from typing import Any
 
 from tinytuya import UDPPORT, UDPPORTAPP, UDPPORTS, decrypt_udp
+from tinytuya.scanner import send_discovery_request
 
 _LOGGER = logging.getLogger(__name__)
 
 # 6666 is plaintext (protocol 3.1), 6667 is AES encrypted (3.2 to 3.4),
 # 7000 is used by 3.5 devices and the mobile app.
 DISCOVERY_PORTS = (UDPPORT, UDPPORTS, UDPPORTAPP)
+
+# Protocol 3.1 to 3.4 devices announce themselves every few seconds, but 3.5
+# devices stay silent until they are asked, so a request has to be broadcast
+# for them to be found at all.
+PROBE_INTERVAL = 60
 
 
 @dataclass(frozen=True)
@@ -87,6 +93,7 @@ class TuyaLocalDiscovery:
         self._transports: list[asyncio.DatagramTransport] = []
         self._seen: dict[str, DiscoveredDevice] = {}
         self._tasks: set[asyncio.Task] = set()
+        self._probe_task: asyncio.Task | None = None
 
     @property
     def devices(self) -> dict[str, DiscoveredDevice]:
@@ -106,6 +113,33 @@ class TuyaLocalDiscovery:
                 "Could not listen on any Tuya discovery port, "
                 "automatic device discovery is unavailable",
             )
+            return
+
+        self._probe_task = loop.create_task(self._async_probe_loop())
+
+    async def async_request_devices(self) -> None:
+        """Ask devices on the local network to announce themselves.
+
+        Protocol 3.5 devices only answer when asked, so without this they are
+        never discovered. Older devices ignore the request and keep to their
+        own broadcast schedule.
+        """
+        try:
+            await asyncio.get_running_loop().run_in_executor(
+                None,
+                send_discovery_request,
+            )
+        except Exception as e:
+            # Broadcasting can fail on unusual network setups (no broadcast
+            # capable interface, container networking). Devices that announce
+            # themselves are still found, so this is not fatal.
+            _LOGGER.debug("Unable to broadcast a discovery request: %s %s", type(e), e)
+
+    async def _async_probe_loop(self) -> None:
+        """Broadcast discovery requests until discovery is stopped."""
+        while True:
+            await self.async_request_devices()
+            await asyncio.sleep(PROBE_INTERVAL)
 
     async def _async_listen(
         self,
@@ -137,6 +171,9 @@ class TuyaLocalDiscovery:
 
     def async_stop(self) -> None:
         """Stop listening."""
+        if self._probe_task is not None:
+            self._probe_task.cancel()
+            self._probe_task = None
         for transport in self._transports:
             transport.close()
         self._transports = []

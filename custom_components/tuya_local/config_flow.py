@@ -205,6 +205,10 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
         if discovery is None:
             return {}
 
+        # Protocol 3.5 devices only answer when asked, so prompt them rather
+        # than relying on whatever has been heard so far.
+        await discovery.async_request_devices()
+
         configured = {
             entry.data.get(CONF_DEVICE_ID) for entry in self._async_current_entries()
         }
