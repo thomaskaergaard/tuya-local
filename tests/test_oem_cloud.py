@@ -1,6 +1,7 @@
 """Tests for the cloud behind a rebranded Tuya app."""
 
 import hashlib
+import json
 
 import pytest
 
@@ -261,3 +262,89 @@ async def test_request_is_signed_and_carries_the_body(hass, mocker):
     assert session.post.call_args.kwargs["data"] == {
         "postData": '{"email":"me@example.com"}'
     }
+
+
+@pytest.mark.asyncio
+async def test_datamodel_describes_each_datapoint(hass, mocker):
+    """The schema is what makes a bare list of dps values meaningful."""
+    cloud = OemCloud(hass)
+    cloud._sid = "session"
+
+    schema = [
+        {"id": 20, "code": "switch_led", "mode": "rw", "property": {"type": "bool"}},
+        {
+            "id": 22,
+            "code": "bright_value_v2",
+            "mode": "rw",
+            "property": {"type": "value", "min": 10, "max": 1000, "scale": 0},
+        },
+        {
+            "id": 21,
+            "code": "work_mode",
+            "mode": "rw",
+            "property": {"type": "enum", "range": ["white", "colour"]},
+        },
+    ]
+
+    async def call(action, post_data=None, **kwargs):
+        assert action == "tuya.m.device.get"
+        assert post_data == {"devId": "bulb"}
+        return {"schema": json.dumps(schema)}
+
+    mocker.patch.object(cloud, "_async_call", side_effect=call)
+    model = await cloud.async_get_datamodel("bulb")
+
+    assert model == [
+        {"id": 20, "name": "switch_led", "type": "bool", "format": {}, "mode": "rw"},
+        {
+            "id": 22,
+            "name": "bright_value_v2",
+            "type": "value",
+            "format": {"min": 10, "max": 1000, "scale": 0},
+            "mode": "rw",
+        },
+        {
+            "id": 21,
+            "name": "work_mode",
+            "type": "enum",
+            "format": {"range": ["white", "colour"]},
+            "mode": "rw",
+        },
+    ]
+
+
+@pytest.mark.asyncio
+async def test_datamodel_accepts_an_unwrapped_schema(hass, mocker):
+    """Some responses carry the schema as a list rather than a string."""
+    cloud = OemCloud(hass)
+    cloud._sid = "session"
+
+    mocker.patch.object(
+        cloud,
+        "_async_call",
+        return_value={"schema": [{"id": 1, "code": "switch", "property": None}]},
+    )
+    model = await cloud.async_get_datamodel("bulb")
+
+    assert model == [
+        {"id": 1, "name": "switch", "type": None, "format": {}, "mode": None}
+    ]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "response",
+    [
+        None,
+        {},
+        {"schema": "not json"},
+        {"schema": {"unexpected": "shape"}},
+    ],
+)
+async def test_datamodel_is_absent_when_it_cannot_be_read(hass, mocker, response):
+    """An unreadable schema must not stop a device being added."""
+    cloud = OemCloud(hass)
+    cloud._sid = "session"
+
+    mocker.patch.object(cloud, "_async_call", return_value=response)
+    assert await cloud.async_get_datamodel("bulb") is None

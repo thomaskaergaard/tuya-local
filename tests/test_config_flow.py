@@ -1318,3 +1318,38 @@ def test_migration_gets_correct_device_id():
         },
     )
     assert get_device_unique_id(entry) == "deviceid"
+
+
+@pytest.mark.asyncio
+async def test_brand_login_is_kept_for_the_device_spec(hass, fake_discovery, mocker):
+    """The brand account is the only one that can describe a brand device."""
+    fake_discovery.unidentified = ["192.168.3.11"]
+    result = await _account_menu(hass, mocker)
+
+    oem_cloud = fake_oem_cloud(mocker, {"ledvanceid": LEDVANCE_DEVICE})
+    mocker.patch.object(config_flow, "OemCloud", return_value=oem_cloud)
+    mocker.patch(
+        "custom_components.tuya_local.discovery.identify_host",
+        return_value=DiscoveredDevice(
+            device_id="ledvanceid",
+            ip="192.168.3.11",
+            version="3.4",
+        ),
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {"next_step_id": "oem"},
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {
+            "brand": "ledvance",
+            "region": "eu",
+            CONF_EMAIL: "me@example.com",
+            CONF_PASSWORD: "hunter2",
+        },
+    )
+    assert result["step_id"] == "local"
+
+    flow = hass.config_entries.flow._progress[result["flow_id"]]
+    assert flow._ConfigFlowHandler__oem_cloud is oem_cloud

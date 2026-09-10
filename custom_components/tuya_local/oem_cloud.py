@@ -272,3 +272,44 @@ class OemCloud:
                 }
         _LOGGER.debug("Found %d devices in the %s account", len(devices), self._brand)
         return devices
+
+    async def async_get_datamodel(self, device_id: str) -> list[dict[str, Any]] | None:
+        """Return the datapoint spec of a device, as the SmartLife cloud does.
+
+        Without this, devices bought under a brand's own label can only be
+        reported as a bare list of datapoint values, which is rarely enough
+        to tell what a datapoint means.
+        """
+        info = await self._async_call("tuya.m.device.get", {"devId": device_id})
+        if not info:
+            return None
+
+        schema = info.get("schema")
+        if isinstance(schema, str):
+            try:
+                schema = json.loads(schema)
+            except ValueError:
+                _LOGGER.debug("Could not read the schema of %s", device_id)
+                return None
+        if not isinstance(schema, list):
+            return None
+
+        transform = []
+        for entry in schema:
+            if not isinstance(entry, dict):
+                continue
+            # Values live under "property", except for its type, which the
+            # rest of the integration reports separately.
+            spec = entry.get("property")
+            spec = dict(spec) if isinstance(spec, dict) else {}
+            datatype = spec.pop("type", entry.get("type"))
+            transform.append(
+                {
+                    "id": entry.get("id"),
+                    "name": entry.get("code") or entry.get("name"),
+                    "type": datatype,
+                    "format": spec,
+                    "mode": entry.get("mode"),
+                }
+            )
+        return transform

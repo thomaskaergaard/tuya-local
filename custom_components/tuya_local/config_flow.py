@@ -78,10 +78,12 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
     __cloud_device: dict[str, Any] | None = None
     __unidentified: list[str] = []
     __pending_host: str | None = None
+    __oem_cloud: OemCloud | None = None
 
     def __init__(self) -> None:
         """Initialize the config flow."""
         self.cloud = None
+        self.__oem_cloud = None
 
     async def async_init_cloud(self):
         """Create the cloud interface, backed by the persistent cache."""
@@ -400,6 +402,9 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
                     cache = await async_get_cache(self.hass)
                     await cache.async_update_devices(devices)
                     self.__cloud_devices = {**self.__cloud_devices, **devices}
+                    # Kept so that the datapoint spec of the chosen device can
+                    # be fetched without signing in a second time.
+                    self.__oem_cloud = cloud
                     if self.__pending_host:
                         return await self._async_identified_device()
                     return await self.async_step_choose_device()
@@ -900,10 +905,16 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
                     self.__cloud_device.get("local_product_id"),
                 )
             try:
-                await self.async_init_cloud()
-                model = await self.cloud.async_get_datamodel(
-                    self.__cloud_device.get("id"),
-                )
+                model = None
+                if self.__oem_cloud is not None:
+                    model = await self.__oem_cloud.async_get_datamodel(
+                        self.__cloud_device.get("id"),
+                    )
+                else:
+                    await self.async_init_cloud()
+                    model = await self.cloud.async_get_datamodel(
+                        self.__cloud_device.get("id"),
+                    )
                 if model:
                     _LOGGER.warning(
                         "Partial cloud device spec:\n%s",
