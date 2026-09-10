@@ -35,6 +35,7 @@ from .const import (
     CONF_MANUFACTURER,
     CONF_MODEL,
     CONF_POLL_ONLY,
+    CONF_PRODUCT_ID,
     CONF_PROTOCOL_VERSION,
     CONF_TYPE,
     CONF_USER_CODE,
@@ -813,6 +814,13 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
                         self.device.set_detected_product_id(
                             self.__cloud_device.get("local_product_id")
                         )
+                    # Kept so that it can be reported in diagnostics, which is
+                    # the only record of it once setup has finished.
+                    product_id = self.__cloud_device.get(
+                        "product_id"
+                    ) or self.__cloud_device.get("local_product_id")
+                    if product_id:
+                        self.data = {**self.data, CONF_PRODUCT_ID: product_id}
                 await self.async_set_unique_id(
                     user_input.get(CONF_DEVICE_CID, user_input[CONF_DEVICE_ID])
                 )

@@ -107,7 +107,7 @@ The following brands are supported:
 
 The keys are cached, so devices from these accounts are named by discovery from then on. The password is not stored, which means these keys are not refreshed automatically the way SmartLife keys are; sign in again if a device is reset or re-paired.
 
-If a device of this kind is only recognised as a generic configuration, or is not recognised at all, the brand account is also asked for its datapoint specification while the device is being added. That specification, the product id and the local datapoint values are all written to the Home Assistant log, and are what a configuration fitting the exact model can be written from, so include them when requesting support for a new device.
+If a device of this kind is only recognised as a generic configuration, or is not recognised at all, the brand account is also asked for its datapoint specification while the device is being added. That specification, the product id and the local datapoint values are all written to the Home Assistant log, and are what a configuration fitting the exact model can be written from, so include them when requesting support for a new device. The product id is recorded against the device as well, so it is reported in its diagnostics afterwards without having to search the log.
 
 The description of this interface was published by [FlagX](https://github.com/FlagX/ha-ledvance-tuya-resync-localkey) under the MIT licence.
 

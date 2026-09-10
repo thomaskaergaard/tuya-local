@@ -19,6 +19,7 @@ from custom_components.tuya_local.const import (
     CONF_DEVICE_ID,
     CONF_LOCAL_KEY,
     CONF_POLL_ONLY,
+    CONF_PRODUCT_ID,
     CONF_PROTOCOL_VERSION,
     CONF_TYPE,
     DATA_DISCOVERY,
@@ -1353,3 +1354,59 @@ async def test_brand_login_is_kept_for_the_device_spec(hass, fake_discovery, moc
 
     flow = hass.config_entries.flow._progress[result["flow_id"]]
     assert flow._ConfigFlowHandler__oem_cloud is oem_cloud
+
+
+@pytest.mark.asyncio
+async def test_cloud_product_id_is_kept_in_the_entry(hass, fake_discovery, mocker):
+    """Otherwise the product id survives only as a line in the log."""
+    fake_discovery.unidentified = ["192.168.3.11"]
+    result = await _account_menu(hass, mocker)
+
+    mocker.patch.object(
+        config_flow,
+        "OemCloud",
+        return_value=fake_oem_cloud(mocker, {"ledvanceid": LEDVANCE_DEVICE}),
+    )
+    mocker.patch(
+        "custom_components.tuya_local.discovery.identify_host",
+        return_value=DiscoveredDevice(
+            device_id="ledvanceid",
+            ip="192.168.3.11",
+            version="3.4",
+        ),
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {"next_step_id": "oem"},
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {
+            "brand": "ledvance",
+            "region": "eu",
+            CONF_EMAIL: "me@example.com",
+            CONF_PASSWORD: "hunter2",
+        },
+    )
+    assert result["step_id"] == "local"
+
+    mock_device = mocker.MagicMock()
+    mock_device._protocol_configured = "3.4"
+    setup_device_mock(mock_device, mocker)
+    mocker.patch(
+        "custom_components.tuya_local.config_flow.async_test_connection",
+        return_value=mock_device,
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {
+            CONF_DEVICE_ID: "ledvanceid",
+            CONF_HOST: "192.168.3.11",
+            CONF_LOCAL_KEY: TESTKEY,
+            CONF_PROTOCOL_VERSION: "3.4",
+            CONF_POLL_ONLY: False,
+        },
+    )
+
+    flow = hass.config_entries.flow._progress[result["flow_id"]]
+    assert flow.data[CONF_PRODUCT_ID] == "prodid"

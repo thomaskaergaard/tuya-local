@@ -10,6 +10,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 from custom_components.tuya_local.const import (
     CONF_DEVICE_ID,
     CONF_LOCAL_KEY,
+    CONF_PRODUCT_ID,
     CONF_PROTOCOL_VERSION,
     CONF_TYPE,
     DOMAIN,
@@ -108,3 +109,50 @@ async def test_diagnostic_redaction(hass):
     assert diag["device_id"] is REDACTED
     assert diag["local_key"] is REDACTED
     assert diag["cached_state"]["2"] is REDACTED
+
+
+@pytest.mark.asyncio
+async def test_diagnostics_report_the_product_id(hass):
+    """The product id is what a config for the exact model is written from."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={
+            CONF_DEVICE_ID: "test_device",
+            CONF_LOCAL_KEY: "test_key",
+            CONF_PROTOCOL_VERSION: "auto",
+            CONF_TYPE: "simple_switch",
+            CONF_PRODUCT_ID: "key8u54q9dtru5jw",
+        },
+    )
+    m_device = Mock()
+    m_device._api_protocol_version_index = 0
+    m_device._children = []
+    m_device._cached_state = {"1": "Test"}
+    m_device._pending_updates = {}
+    hass.data[DOMAIN] = {"test_device": {"device": m_device}}
+
+    diag = await async_get_config_entry_diagnostics(hass, entry)
+    assert diag["product_id"] == "key8u54q9dtru5jw"
+
+
+@pytest.mark.asyncio
+async def test_diagnostics_cope_without_a_product_id(hass):
+    """Devices added by hand never have one."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={
+            CONF_DEVICE_ID: "test_device",
+            CONF_LOCAL_KEY: "test_key",
+            CONF_PROTOCOL_VERSION: "auto",
+            CONF_TYPE: "simple_switch",
+        },
+    )
+    m_device = Mock()
+    m_device._api_protocol_version_index = 0
+    m_device._children = []
+    m_device._cached_state = {"1": "Test"}
+    m_device._pending_updates = {}
+    hass.data[DOMAIN] = {"test_device": {"device": m_device}}
+
+    diag = await async_get_config_entry_diagnostics(hass, entry)
+    assert diag["product_id"] == ""

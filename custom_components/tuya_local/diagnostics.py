@@ -16,6 +16,7 @@ from tinytuya import __version__ as tinytuya_version
 from .const import (
     API_PROTOCOL_VERSIONS,
     CONF_DEVICE_CID,
+    CONF_PRODUCT_ID,
     CONF_PROTOCOL_VERSION,
     CONF_TYPE,
     DOMAIN,
@@ -58,6 +59,7 @@ def _async_get_diagnostics(
         if hostname != "" and hostname.casefold() != "auto"
         else hostname,
         "protocol_version": entry.data[CONF_PROTOCOL_VERSION],
+        "product_id": entry.data.get(CONF_PRODUCT_ID, ""),
         "tinytuya_version": tinytuya_version,
     }
 
