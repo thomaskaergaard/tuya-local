@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from typing import Any
 
@@ -47,7 +48,7 @@ HUB_CATEGORIES = [
 class Cloud:
     """Optional Tuya cloud interface for getting device information."""
 
-    def __init__(self, hass: HomeAssistant):
+    def __init__(self, hass: HomeAssistant, cache=None):
         self.__login_control = LoginControl()
         self.__authentication = {}
         self.__user_code = None
@@ -55,9 +56,15 @@ class Cloud:
         self.__hass = hass
         self.__error_code = None
         self.__error_msg = None
+        self.__cache = cache
         # Restore cached authentication
         if cached := self.__hass.data[DOMAIN].get("auth_cache"):
             self.__authentication = cached
+        elif cache is not None and cache.auth:
+            # Fall back to authentication persisted from a previous run, so
+            # that keys can be refreshed without the user logging in again.
+            self.__authentication = cache.auth
+            self.__hass.data[DOMAIN]["auth_cache"] = cache.auth
 
     async def async_get_qr_code(self, user_code: str | None = None) -> bool:
         """Get QR code from Tuya server for user code authentication."""
@@ -110,6 +117,8 @@ class Cloud:
                 },
             }
             self.__hass.data[DOMAIN]["auth_cache"] = self.__authentication
+            if self.__cache is not None:
+                await self.__cache.async_set_auth(self.__authentication)
         else:
             _LOGGER.warning("Login failed: %s", info)
             self.__error_code = info.get(TUYA_RESPONSE_CODE, {})
@@ -117,11 +126,13 @@ class Cloud:
             # Ensure expired authentication is cleared on next attempt
             self.__hass.data[DOMAIN]["auth_cache"] = None
             self.__authentication = {}
+            if self.__cache is not None:
+                await self.__cache.async_set_auth(None)
         return success
 
     async def async_get_devices(self) -> dict[str, Any]:
         """Get all devices associated with the account."""
-        token_listener = TokenListener(self.__hass)
+        token_listener = TokenListener(self.__hass, self.__cache, self.__authentication)
         manager = Manager(
             TUYA_CLIENT_ID,
             self.__authentication["user_code"],
@@ -182,11 +193,14 @@ class Cloud:
                 index = cloud_device["id"]
             cloud_devices[index] = cloud_device
 
+        if self.__cache is not None:
+            await self.__cache.async_update_devices(cloud_devices)
+
         return cloud_devices
 
     async def async_get_datamodel(self, device_id) -> dict[str, Any] | None:
         """Get the data model for the specified device (QueryThingsDataModel)."""
-        token_listener = TokenListener(self.__hass)
+        token_listener = TokenListener(self.__hass, self.__cache, self.__authentication)
         manager = Manager(
             TUYA_CLIENT_ID,
             self.__authentication["user_code"],
@@ -222,6 +236,12 @@ class Cloud:
         # Clear authentication cache
         self.__hass.data[DOMAIN]["auth_cache"] = None
         self.__authentication = {}
+
+    async def async_logout(self) -> None:
+        """Logout from the Tuya cloud, clearing persisted credentials."""
+        self.logout()
+        if self.__cache is not None:
+            await self.__cache.async_set_auth(None)
 
     @property
     def is_authenticated(self) -> bool:
@@ -281,11 +301,28 @@ class DeviceListener(SharingDeviceListener):
 
 class TokenListener(SharingTokenListener):
     """Listener for upstream token updates.
-    This is only needed to get some debug output when tokens are refreshed."""
 
-    def __init__(self, hass: HomeAssistant):
+    The SDK rotates both the access and the refresh token, so the persisted
+    copy must be updated or it becomes unusable after the first refresh.
+    """
+
+    def __init__(self, hass: HomeAssistant, cache=None, authentication=None):
         self.__hass = hass
+        self.__cache = cache
+        self.__authentication = authentication
 
     def update_token(self, token_info: dict[str, Any]) -> None:
         """Update the token information."""
         _LOGGER.debug("Token updated")
+        if self.__cache is None or not self.__authentication:
+            return
+
+        # Keep the in-memory copies current, then persist from the event loop
+        # as this is called from the SDK's worker thread.
+        self.__authentication["token_info"] = token_info
+        updated = dict(self.__authentication)
+        self.__hass.data[DOMAIN]["auth_cache"] = updated
+        asyncio.run_coroutine_threadsafe(
+            self.__cache.async_set_auth(updated),
+            self.__hass.loop,
+        )

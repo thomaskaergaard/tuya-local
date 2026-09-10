@@ -79,9 +79,7 @@ rules:
   entity-disabled-by-default:
     status: todo
     comment: attribute for controlling this needed
-  discovery:
-    status: todo
-    comment: local and cloud
+  discovery: done
   stale-devices:
     status: todo
     comment: need to implement async_remove_config_entry_device
@@ -96,9 +94,7 @@ rules:
     status: todo
     comment: how is this different than options flow?
   dynamic-devices: done
-  discovery-update-info:
-    status: exempt
-    comment: until discovery implemented
+  discovery-update-info: done
   repair-issues:
     status: todo
     comment: review what can be raised

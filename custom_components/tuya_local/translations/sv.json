@@ -1,6 +1,7 @@
 {
     "title": "Tuya Local",
     "config": {
+        "flow_title": "{name}",
         "step": {
             "user": {
                 "title": "Konfigurera din Tuya Local-enhet",
@@ -8,6 +9,10 @@
                 "data": {
                     "setup_mode": "Installationsval:"
                 }
+            },
+            "discovery_confirm": {
+                "title": "Lägg till upptäckt enhet",
+                "description": "{device_name}En Tuya-enhet hittades i ditt nätverk.\n\nEnhets-ID: `{device_id}`\nIP-adress: `{host}`\n\nOm den lokala nyckeln inte redan är känd från en molninloggning kommer du att tillfrågas om den i nästa steg.\n\nStäng mobilappen innan du fortsätter, eftersom dess anslutningar till enheten ofta blockerar Tuya Locals kommunikation med den."
             },
             "cloud": {
                 "title": "Logga in på Tuya",
@@ -121,7 +126,7 @@
                 },
                 "device": {
                     "name": "Enhet",
-                    "description": "Den IR-enhet som kommandot ska skickas till. Detta är valfritt och endast nödvändigt om kommandot sparades med en enhet." 
+                    "description": "Den IR-enhet som kommandot ska skickas till. Detta är valfritt och endast nödvändigt om kommandot sparades med en enhet."
                 }
             }
         }

@@ -1,6 +1,7 @@
 {
     "title": "Tuya Local",
     "config": {
+        "flow_title": "{name}",
         "step": {
             "user": {
                 "title": "Konfigurer din lokale Tuya enhet",
@@ -8,6 +9,10 @@
                 "data": {
                     "setup_mode": "Oppsettvalg:"
                 }
+            },
+            "discovery_confirm": {
+                "title": "Legg til oppdaget enhet",
+                "description": "{device_name}En Tuya-enhet ble funnet i nettverket ditt.\n\nEnhets-ID: `{device_id}`\nIP-adresse: `{host}`\n\nHvis den lokale nøkkelen ikke allerede er kjent fra en skyinnlogging, blir du bedt om den i neste steg.\n\nAvslutt mobilappen før du fortsetter, siden tilkoblingene dens til enheten ofte blokkerer kommunikasjonen til Tuya Local."
             },
             "cloud": {
                 "title": "Logg inn på Tuya",

@@ -1,6 +1,7 @@
 {
     "title": "Tuya Local",
     "config": {
+        "flow_title": "{name}",
         "step": {
             "user": {
                 "title": "Configurer votre appareil Tuya Local",
@@ -8,6 +9,10 @@
                 "data": {
                     "setup_mode": "Choix de configuration :"
                 }
+            },
+            "discovery_confirm": {
+                "title": "Ajouter l'appareil découvert",
+                "description": "{device_name}Un appareil Tuya a été trouvé sur votre réseau.\n\nIdentifiant de l'appareil : `{device_id}`\nAdresse IP : `{host}`\n\nSi la clé locale n'est pas déjà connue grâce à une connexion au cloud, elle vous sera demandée à l'étape suivante.\n\nFermez l'application mobile avant de continuer, car ses connexions à l'appareil bloquent souvent la communication de Tuya Local."
             },
             "cloud": {
                 "title": "Connectez-vous à Tuya",

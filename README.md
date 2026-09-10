@@ -52,15 +52,33 @@ instance.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://m
 
 ### Choose your configuration path
 
-There are two options for configuring a device:
+There are three options for configuring a device:
+- Devices found automatically on your local network will appear on the Integrations page, ready to be added.
 - You can login to Tuya cloud with the Tuya or SmartLife app and retrieve a list of devices and the necessary local connection data.
 - You can provide all the necessary information manually [as per the instructions in DEVICES_DETAILS.md](DEVICE_DETAILS.md#finding-your-device-id-and-local-key).
 
-The first choice essentially automates all the manual steps of the second and without needing to create a Tuya IOT developer account. This is especially important now that Tuya has started time limiting access to a key data access capability in the IOT developer portal to only a month with the ability to refresh the trial of that only every 6 months.
+The second choice essentially automates all the manual steps of the third and without needing to create a Tuya IOT developer account. This is especially important now that Tuya has started time limiting access to a key data access capability in the IOT developer portal to only a month with the ability to refresh the trial of that only every 6 months.
 
 The cloud assisted choice will guide you through authenticating, choosing a device to add from the list of devices associated with your Tuya account, locate the device on your local subnet and then drop you into [Stage One](#stage-one) with fully populated data necessary to move forward to [Stage Two](#stage-two).
 
-The Tuya authentication token expires after a small number of hours and so is not saved by the integration. But, as long as you don't restart Home Assistant, this allows you to add multiple devices one after another only needing to authenticate once for the first one.
+The Tuya authentication token is cached so that local keys can be refreshed without you needing to log in again. It expires after a small number of hours, after which you will be asked to authenticate again the next time it is needed.
+
+### Automatic discovery
+
+Tuya devices announce themselves on the local network, and the integration listens for those announcements. This means:
+
+- Devices you have not added yet are offered on the Integrations page without you needing to search for them. If the local key is already known from a previous cloud login it is filled in for you, otherwise you will be asked for it.
+- Devices that change IP address, for example after a DHCP lease expires, are updated automatically instead of becoming unavailable.
+
+Discovery listens on UDP ports 6666, 6667 and 7000. If another application on the same host is already using those ports, discovery is skipped and everything else continues to work as before.
+
+Note that discovery only works if the devices are on the same subnet as Home Assistant, as broadcasts are not usually forwarded between subnets.
+
+Home Assistant only loads the integration once it has at least one device, so discovery begins after your first device has been added manually or through the cloud assisted flow.
+
+### Local key refresh
+
+Tuya issues a new local key every time a device is reset or re-paired with the mobile app, which makes the stored key stop working. If a device fails to connect and a cached cloud login is available, the integration will fetch the current key from the cloud and repair the configuration entry by itself. Cloud lookups are rate limited, so a device that is merely switched off will not cause repeated cloud requests.
 
 ### Stage One
 

@@ -1,6 +1,7 @@
 {
     "title": "Tuya Local",
     "config": {
+        "flow_title": "{name}",
         "step": {
             "user": {
                 "title": "Налаштуйте свій пристрій Tuya Local",
@@ -8,6 +9,10 @@
                 "data": {
                     "setup_mode": "Вибір налаштування:"
                 }
+            },
+            "discovery_confirm": {
+                "title": "Add discovered device",
+                "description": "{device_name}A Tuya device was found on your network.\n\nDevice ID: `{device_id}`\nIP address: `{host}`\n\nIf the local key is not already known from a cloud login, you will be asked for it in the next step.\n\nShut down the mobile app before continuing, as its connections to the device will often block Tuya Local communication with it."
             },
             "cloud": {
                 "title": "Увійти в Tuya",

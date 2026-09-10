@@ -1,6 +1,7 @@
 {
     "title": "Tuya Local",
     "config": {
+        "flow_title": "{name}",
         "step": {
             "user": {
                 "title": "Skonfiguruj swoje urządzenie Tuya Local",
@@ -8,6 +9,10 @@
                 "data": {
                     "setup_mode": "Wybór konfiguracji:"
                 }
+            },
+            "discovery_confirm": {
+                "title": "Dodaj wykryte urządzenie",
+                "description": "{device_name}W Twojej sieci znaleziono urządzenie Tuya.\n\nIdentyfikator urządzenia: `{device_id}`\nAdres IP: `{host}`\n\nJeśli klucz lokalny nie jest jeszcze znany z logowania do chmury, zostaniesz o niego poproszony w następnym kroku.\n\nZamknij aplikację mobilną przed kontynuowaniem, ponieważ jej połączenia z urządzeniem często blokują komunikację Tuya Local."
             },
             "cloud": {
                 "title": "Zaloguj się do Tuyi",

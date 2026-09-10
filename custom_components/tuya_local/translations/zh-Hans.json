@@ -1,6 +1,7 @@
 {
     "title": "Tuya Local",
     "config": {
+        "flow_title": "{name}",
         "step": {
             "user": {
                 "title": "配置您的Tuya Local设备",
@@ -8,6 +9,10 @@
                 "data": {
                     "setup_mode": "设置选项:"
                 }
+            },
+            "discovery_confirm": {
+                "title": "Add discovered device",
+                "description": "{device_name}A Tuya device was found on your network.\n\nDevice ID: `{device_id}`\nIP address: `{host}`\n\nIf the local key is not already known from a cloud login, you will be asked for it in the next step.\n\nShut down the mobile app before continuing, as its connections to the device will often block Tuya Local communication with it."
             },
             "cloud": {
                 "title": "登录Tuya",
@@ -117,7 +122,7 @@
                 },
                 "command": {
                     "name": "命令",
-                    "description": "要发送的命令。必须是之前由此集成为此遥控器学习的命令。" 
+                    "description": "要发送的命令。必须是之前由此集成为此遥控器学习的命令。"
                 },
                 "device": {
                     "name": "设备",

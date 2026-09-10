@@ -8,17 +8,21 @@ https://github.com/codetheweb/tuyapi/issues/31.
 """
 
 import logging
+from time import monotonic
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST
+from homeassistant.config_entries import SOURCE_INTEGRATION_DISCOVERY, ConfigEntry
+from homeassistant.const import CONF_HOST, EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.helpers import discovery_flow
 from homeassistant.helpers.entity_registry import (
     async_get as async_get_entity_registry,
 )
 from homeassistant.helpers.entity_registry import async_migrate_entries
+from homeassistant.helpers.typing import ConfigType
 from homeassistant.util import slugify
 
+from .cloud_cache import async_get_cache
 from .const import (
     CONF_DEVICE_CID,
     CONF_DEVICE_ID,
@@ -26,14 +30,19 @@ from .const import (
     CONF_POLL_ONLY,
     CONF_PROTOCOL_VERSION,
     CONF_TYPE,
+    DATA_DISCOVERY,
     DOMAIN,
 )
 from .device import async_delete_device, get_device_id, setup_device
+from .discovery import DiscoveredDevice, TuyaLocalDiscovery
 from .helpers.device_config import get_config
 from .services import async_setup_services
 
 _LOGGER = logging.getLogger(__name__)
 NOT_FOUND = "Configuration file for %s not found"
+DATA_RESYNC_ATTEMPTS = "resync_attempts"
+# Minimum time between cloud lookups for a device whose setup is failing.
+RESYNC_INTERVAL = 3600
 
 
 def replace_unique_ids(entity_entry, device_id, conf_file, replacements):
@@ -963,12 +972,108 @@ async def async_migrate_entry(hass, entry: ConfigEntry):
     return True
 
 
+async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+    """Set up the Tuya Local component and start local discovery."""
+    hass.data.setdefault(DOMAIN, {})
+    await async_start_discovery(hass)
+    return True
+
+
+async def async_start_discovery(hass: HomeAssistant) -> None:
+    """Listen for Tuya devices announcing themselves on the local network."""
+    if hass.data[DOMAIN].get(DATA_DISCOVERY) is not None:
+        return
+
+    async def _async_device_discovered(device: DiscoveredDevice) -> None:
+        discovery_flow.async_create_flow(
+            hass,
+            DOMAIN,
+            context={"source": SOURCE_INTEGRATION_DISCOVERY},
+            data={
+                CONF_DEVICE_ID: device.device_id,
+                CONF_HOST: device.ip,
+                "product_id": device.product_id,
+                "version": device.version,
+            },
+        )
+
+    discovery = TuyaLocalDiscovery(_async_device_discovered)
+    await discovery.async_start()
+    hass.data[DOMAIN][DATA_DISCOVERY] = discovery
+
+    @callback
+    def _stop_discovery(event) -> None:
+        discovery.async_stop()
+
+    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _stop_discovery)
+
+
+async def async_resync_local_key(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Refresh a device's local key from the Tuya cloud.
+
+    Tuya issues a new local key every time a device is reset or re-paired,
+    which makes the stored key fail. If we still hold cloud credentials we
+    can fetch the new key and repair the entry without user interaction.
+
+    Returns True if a new key was found and stored.
+    """
+    from .cloud import Cloud
+
+    cache = await async_get_cache(hass)
+    if not cache.auth:
+        return False
+
+    # A device being merely offline also fails setup, so throttle cloud
+    # lookups rather than hitting the cloud on every setup retry.
+    attempts = hass.data[DOMAIN].setdefault(DATA_RESYNC_ATTEMPTS, {})
+    now = monotonic()
+    last_attempt = attempts.get(entry.entry_id)
+    if last_attempt is not None and now - last_attempt < RESYNC_INTERVAL:
+        return False
+    attempts[entry.entry_id] = now
+
+    cloud = Cloud(hass, cache)
+    if not cloud.is_authenticated:
+        return False
+
+    device_id = entry.data.get(CONF_DEVICE_ID)
+    device_cid = entry.data.get(CONF_DEVICE_CID)
+    try:
+        await cloud.async_get_devices()
+    except Exception as e:
+        _LOGGER.debug("Could not refresh local keys from cloud: %s %s", type(e), e)
+        return False
+
+    if device_cid:
+        # For a device behind a gateway the entry holds the gateway's device
+        # id but the sub device's local key, so it must be looked up by cid.
+        # Using the device id here would overwrite a working key with the
+        # gateway's own key.
+        local_key = cache.get_subdevice_local_key(device_cid)
+    else:
+        local_key = cache.get_local_key(device_id)
+
+    if not local_key or local_key == entry.data.get(CONF_LOCAL_KEY):
+        return False
+
+    _LOGGER.info("Updating changed local key for device %s from cloud", device_id)
+    hass.config_entries.async_update_entry(
+        entry,
+        data={**entry.data, CONF_LOCAL_KEY: local_key},
+    )
+    return True
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     device_id = get_device_id(entry.data)
     _LOGGER.debug(
         "Setting up entry for device: %s",
         device_id,
     )
+    hass.data.setdefault(DOMAIN, {})
+    # async_setup normally starts this, but make sure discovery is running
+    # even if the component was loaded directly from a config entry.
+    await async_start_discovery(hass)
     config = {**entry.data, **entry.options, "name": entry.title}
     try:
         device = await hass.async_add_executor_job(setup_device, hass, config)
@@ -976,10 +1081,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 
     except Exception as e:
         cleanup_failed_device(hass, device_id)
+        if await async_resync_local_key(hass, entry):
+            raise ConfigEntryNotReady("tuya-local local key refreshed") from e
         raise ConfigEntryNotReady("tuya-local device not ready") from e
 
     if not device.has_returned_state:
         cleanup_failed_device(hass, device_id)
+        if await async_resync_local_key(hass, entry):
+            raise ConfigEntryNotReady("tuya-local local key refreshed")
         raise ConfigEntryNotReady("tuya-local device offline")
 
     device_conf = await hass.async_add_executor_job(
@@ -997,7 +1106,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     await hass.config_entries.async_forward_entry_setups(entry, entities)
     await async_setup_services(hass, entities)
 
-    entry.add_update_listener(async_update_entry)
+    # Registering with async_on_unload means the listener is removed when the
+    # entry is unloaded, rather than accumulating a duplicate on every reload.
+    entry.async_on_unload(entry.add_update_listener(async_update_entry))
 
     return True
 
@@ -1005,7 +1116,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
     _LOGGER.debug("Unloading entry for device: %s", get_device_id(entry.data))
     config = entry.data
-    data = hass.data[DOMAIN][get_device_id(config)]
+    data = hass.data[DOMAIN].get(get_device_id(config))
+    if data is None:
+        # Setup failed or was already cleaned up, nothing to unload.
+        return True
     device_conf = await hass.async_add_executor_job(
         get_config,
         config[CONF_TYPE],
@@ -1023,12 +1137,18 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
         await hass.config_entries.async_forward_entry_unload(entry, e)
 
     await async_delete_device(hass, config)
-    del hass.data[DOMAIN][get_device_id(config)]
+    hass.data[DOMAIN].pop(get_device_id(config), None)
 
     return True
 
 
 async def async_update_entry(hass: HomeAssistant, entry: ConfigEntry):
+    """Reload the entry when its configuration changes.
+
+    Going through async_schedule_reload keeps the reload under Home
+    Assistant's setup lock, so it cannot race with a setup retry that was
+    scheduled after a ConfigEntryNotReady, and it cannot bypass the config
+    entry state machine the way calling setup/unload directly would.
+    """
     _LOGGER.debug("Updating entry for device: %s", get_device_id(entry.data))
-    await async_unload_entry(hass, entry)
-    await async_setup_entry(hass, entry)
+    hass.config_entries.async_schedule_reload(entry.entry_id)

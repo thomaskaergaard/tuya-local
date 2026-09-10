@@ -26,6 +26,7 @@ from homeassistant.helpers.selector import (
 
 from . import DOMAIN
 from .cloud import Cloud
+from .cloud_cache import async_get_cache
 from .const import (
     API_PROTOCOL_VERSIONS,
     CONF_DEVICE_CID,
@@ -66,9 +67,75 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
         """Initialize the config flow."""
         self.cloud = None
 
-    def init_cloud(self):
+    async def async_init_cloud(self):
+        """Create the cloud interface, backed by the persistent cache."""
         if self.cloud is None:
-            self.cloud = Cloud(self.hass)
+            self.cloud = Cloud(self.hass, await async_get_cache(self.hass))
+
+    async def async_step_integration_discovery(self, discovery_info):
+        """Handle a device that announced itself on the local network."""
+        device_id = discovery_info[CONF_DEVICE_ID]
+        host = discovery_info[CONF_HOST]
+
+        # One device id can back several entries when a gateway hosts sub
+        # devices, so update every matching entry rather than relying on
+        # unique_id alone. This means a device that changes its DHCP address
+        # repairs itself instead of going unavailable.
+        known = False
+        for entry in self._async_current_entries():
+            if entry.data.get(CONF_DEVICE_ID) != device_id:
+                continue
+            known = True
+            if entry.data.get(CONF_HOST) != host:
+                _LOGGER.debug(
+                    "Updating host for %s from %s to %s",
+                    device_id,
+                    entry.data.get(CONF_HOST),
+                    host,
+                )
+                self.hass.config_entries.async_update_entry(
+                    entry,
+                    data={**entry.data, CONF_HOST: host},
+                )
+        if known:
+            return self.async_abort(reason="already_configured")
+
+        await self.async_set_unique_id(device_id)
+        self._abort_if_unique_id_configured(updates={CONF_HOST: host})
+
+        cache = await async_get_cache(self.hass)
+        cached = cache.get_device(device_id) or {}
+
+        self.__cloud_device = {
+            "id": device_id,
+            "ip": host,
+            CONF_LOCAL_KEY: cached.get(CONF_LOCAL_KEY, ""),
+            "name": cached.get("name"),
+            "product_name": cached.get("product_name"),
+            "product_id": cached.get("product_id"),
+            "local_product_id": discovery_info.get("product_id"),
+            "version": discovery_info.get("version"),
+        }
+        self.context["title_placeholders"] = {
+            "name": cached.get("name") or device_id,
+        }
+        return await self.async_step_discovery_confirm()
+
+    async def async_step_discovery_confirm(self, user_input=None):
+        """Confirm adding a locally discovered device."""
+        if user_input is not None:
+            return await self.async_step_local()
+
+        return self.async_show_form(
+            step_id="discovery_confirm",
+            data_schema=vol.Schema({}),
+            description_placeholders={
+                "device_name": self._device_name_placeholder,
+                "device_id": self.__cloud_device["id"],
+                "host": self.__cloud_device["ip"],
+            },
+            last_step=False,
+        )
 
     async def async_step_user(self, user_input=None):
         errors = {}
@@ -81,11 +148,11 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             mode = user_input.get("setup_mode")
             if mode == "cloud" or mode == "cloud_fresh_login":
-                self.init_cloud()
+                await self.async_init_cloud()
                 try:
                     if mode == "cloud_fresh_login":
                         # Force a fresh login
-                        self.cloud.logout()
+                        await self.cloud.async_logout()
 
                     if self.cloud.is_authenticated:
                         self.__cloud_devices = await self.cloud.async_get_devices()
@@ -121,7 +188,7 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
         """Step user."""
         errors = {}
         placeholders = {}
-        self.init_cloud()
+        await self.async_init_cloud()
 
         if user_input is not None:
             response = await self.cloud.async_get_qr_code(user_input[CONF_USER_CODE])
@@ -167,7 +234,7 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
                     }
                 ),
             )
-        self.init_cloud()
+        await self.async_init_cloud()
         if not await self.cloud.async_login():
             # Try to get a new QR code on failure
             response = await self.cloud.async_get_qr_code()
@@ -296,13 +363,19 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
     @property
     def _device_name_placeholder(self) -> str:
         """Return device name placeholder for step descriptions."""
-        if self.__cloud_device and self.__cloud_device.get("product_name"):
-            parts = []
-            if self.__cloud_device.get("name"):
-                parts.append(self.__cloud_device["name"])
-            parts.append(self.__cloud_device["product_name"])
-            return "**" + " — ".join(parts) + "**\n\n"
-        return ""
+        if not self.__cloud_device:
+            return ""
+        parts = [
+            part
+            for part in (
+                self.__cloud_device.get("name"),
+                self.__cloud_device.get("product_name"),
+            )
+            if part
+        ]
+        if not parts:
+            return ""
+        return "**" + " — ".join(parts) + "**\n\n"
 
     async def async_step_search(self, user_input=None):
         if user_input is not None:
@@ -484,7 +557,7 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
                     self.__cloud_device.get("local_product_id"),
                 )
             try:
-                self.init_cloud()
+                await self.async_init_cloud()
                 model = await self.cloud.async_get_datamodel(
                     self.__cloud_device.get("id"),
                 )
