@@ -82,7 +82,7 @@
             "already_configured": "Zařízení s identifikátorem, který již byl přidán.",
             "not_supported": "Omlouváme se, toto zažízení není podporováno.",
             "no_devices": "Nelze najít žádná neregistrovaná zařízení pro účet.",
-            "no_discovered_devices": "No unconfigured devices were found on the local network. Devices only answer when they are powered on and reachable from Home Assistant. Devices on another subnet or VLAN cannot be found by broadcast, so their network needs to be listed under `discovery_networks` in configuration.yaml."
+            "no_discovered_devices": "No unconfigured devices were found. Devices are only found when they are powered on and reachable from Home Assistant. Devices on another subnet or VLAN cannot be heard, so their network needs to be listed under `discovery_networks` in configuration.yaml."
         },
         "error": {
             "connection": "Není možné připojit se k zařízené s těmito údaji. Může se jednat o dočasný problém, nebo zadané údaje nejsou správné. Pokud jste vybrali konkrétní verzi protokolu, zkuste místo toho 'auto'.",

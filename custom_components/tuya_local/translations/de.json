@@ -82,7 +82,7 @@
             "already_configured": "Es wurde bereits ein Gerät mit dieser ID hinzugefügt.",
             "not_supported": "Dieses Gerät wird leider nicht unterstützt.",
             "no_devices": "Für das Konto konnten keine nicht registrierten Geräte gefunden werden.",
-            "no_discovered_devices": "Es wurden keine nicht eingerichteten Geräte im lokalen Netzwerk gefunden. Geräte antworten nur, wenn sie eingeschaltet und von Home Assistant erreichbar sind. Geräte in einem anderen Subnetz oder VLAN können nicht per Broadcast gefunden werden, daher muss deren Netzwerk unter `discovery_networks` in der configuration.yaml angegeben werden."
+            "no_discovered_devices": "Es wurden keine nicht eingerichteten Geräte gefunden. Geräte werden nur gefunden, wenn sie eingeschaltet und von Home Assistant erreichbar sind. Geräte in einem anderen Subnetz oder VLAN sind nicht zu hören, daher muss deren Netzwerk unter `discovery_networks` in der configuration.yaml angegeben werden."
         },
         "error": {
             "connection": "Mit diesen Angaben kann keine Verbindung zu Ihrem Gerät hergestellt werden. Es könnte sich um ein intermittierendes Problem handeln, oder die Angaben sind falsch. Wenn Sie eine bestimmte Protokollversion ausgewählt haben, versuchen Sie stattdessen 'auto'.",

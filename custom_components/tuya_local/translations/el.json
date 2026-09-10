@@ -82,7 +82,7 @@
             "already_configured": "Έχει ήδη προστεθεί μια συσκευή με αυτό το ID.",
             "not_supported": "Λυπούμαστε, αυτή η συσκευή δεν υποστηρίζεται.",
             "no_devices": "Αδυναμία εύρεσης μη εγγεγραμμένων συσκευών για αυτό το λογαριασμό.",
-            "no_discovered_devices": "No unconfigured devices were found on the local network. Devices only answer when they are powered on and reachable from Home Assistant. Devices on another subnet or VLAN cannot be found by broadcast, so their network needs to be listed under `discovery_networks` in configuration.yaml."
+            "no_discovered_devices": "No unconfigured devices were found. Devices are only found when they are powered on and reachable from Home Assistant. Devices on another subnet or VLAN cannot be heard, so their network needs to be listed under `discovery_networks` in configuration.yaml."
         },
         "error": {
             "connection": "Αδυναμία σύνδεσης στη συσκευή σας με αυτά τα στοιχεία. Ίσως είναι προσωρινό πρόβλημα, ή τα στοιχεία που καταχωρίσατε είναι λάθος. Αν επιλέξατε μια συγκεκριμένη έκδοση πρωτοκόλλου, δοκιμάστε 'auto' αντί για αυτήν.",

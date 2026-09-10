@@ -89,6 +89,18 @@ class CloudCache:
         device = self._devices.get(device_id)
         return device.get(CONF_LOCAL_KEY) if device else None
 
+    def all_local_keys(self) -> dict[str, str]:
+        """Every known local key, keyed by device id.
+
+        Used to work out which device is at an address when it can only be
+        reached by connecting to it rather than by listening for it.
+        """
+        return {
+            device_id: device[CONF_LOCAL_KEY]
+            for device_id, device in self._devices.items()
+            if device.get(CONF_LOCAL_KEY)
+        }
+
     def get_subdevice_local_key(self, device_cid: str) -> str | None:
         """The cached local key for a device behind a gateway.
 

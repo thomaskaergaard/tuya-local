@@ -40,6 +40,24 @@ PROBE_INTERVAL = 60
 # a range large enough to make that unreasonable. /22 is 1022 addresses.
 MAX_PROBE_HOSTS = 1024
 
+# Devices accept commands on this port. Unlike the UDP announcements it is a
+# normal outgoing connection, so it is routed between subnets and its replies
+# are part of the same flow, which firewalls between VLANs will allow.
+TUYA_TCP_PORT = 6668
+SCAN_TIMEOUT = 2.0
+SCAN_CONCURRENCY = 64
+
+# Tried in order of how quickly a wrong key is rejected, so that identifying
+# a device costs as little time as possible. 3.5 is last because it only
+# fails once the connection times out.
+IDENTIFY_VERSIONS = (3.3, 3.4, 3.1, 3.5)
+IDENTIFY_TIMEOUT = 3
+# How long a single scan may spend working out which device is at which
+# address, after which the rest are reported as unidentified.
+IDENTIFY_BUDGET = 60
+# Scanning is far more work than a broadcast, so it runs much less often.
+SCAN_INTERVAL = 300
+
 
 def expand_probe_network(network: str) -> list[str]:
     """List the addresses to probe for a configured network.
@@ -170,6 +188,72 @@ def parse_discovery_message(data: bytes) -> DiscoveredDevice | None:
     )
 
 
+async def async_find_tuya_hosts(
+    targets: list[str],
+    timeout: float = SCAN_TIMEOUT,
+    concurrency: int = SCAN_CONCURRENCY,
+) -> list[str]:
+    """Find the addresses that accept Tuya device connections.
+
+    Broadcasts do not cross subnets, and a device's reply to a discovery
+    request arrives as a new inbound connection which a firewall between
+    VLANs will usually drop. Connecting to each address instead is ordinary
+    routed traffic, so it works wherever the devices are reachable at all.
+    """
+    if not targets:
+        return []
+
+    semaphore = asyncio.Semaphore(concurrency)
+
+    async def check(host: str) -> str | None:
+        async with semaphore:
+            try:
+                _, writer = await asyncio.wait_for(
+                    asyncio.open_connection(host, TUYA_TCP_PORT),
+                    timeout,
+                )
+            except OSError, TimeoutError:
+                return None
+            writer.close()
+            try:
+                await writer.wait_closed()
+            except OSError:
+                pass
+            return host
+
+    found = await asyncio.gather(*(check(host) for host in targets))
+    return [host for host in found if host]
+
+
+def identify_host(host: str, keys: dict[str, str]) -> DiscoveredDevice | None:
+    """Work out which device is at an address, using known local keys.
+
+    A device only identifies itself to someone who already holds its key, so
+    this can only name devices that have been seen in the cloud account.
+    """
+    for device_id, local_key in keys.items():
+        for version in IDENTIFY_VERSIONS:
+            try:
+                device = tinytuya.Device(
+                    device_id,
+                    host,
+                    local_key,
+                    version=version,
+                )
+                device.set_socketTimeout(IDENTIFY_TIMEOUT)
+                status = device.status()
+            except Exception as e:
+                _LOGGER.debug("Error identifying %s as %s: %s", host, device_id, e)
+                continue
+            if isinstance(status, dict) and "dps" in status:
+                return DiscoveredDevice(
+                    device_id=device_id,
+                    ip=host,
+                    version=str(version),
+                )
+    return None
+
+
 class _DiscoveryProtocol(asyncio.DatagramProtocol):
     """Handle datagrams received on a single discovery port."""
 
@@ -190,10 +274,13 @@ class TuyaLocalDiscovery:
         self,
         on_device: Callable[[DiscoveredDevice], Coroutine[Any, Any, None]],
         networks: list[str] | None = None,
+        key_lookup: Callable[[], dict[str, str]] | None = None,
     ) -> None:
         self._on_device = on_device
+        self._key_lookup = key_lookup
         self._transports: list[asyncio.DatagramTransport] = []
         self._seen: dict[str, DiscoveredDevice] = {}
+        self._unidentified: list[str] = []
         self._tasks: set[asyncio.Task] = set()
         self._probe_task: asyncio.Task | None = None
         self._probe_targets: list[str] = []
@@ -204,6 +291,15 @@ class TuyaLocalDiscovery:
                 "Discovery will also probe %d configured addresses",
                 len(self._probe_targets),
             )
+
+    @property
+    def unidentified(self) -> list[str]:
+        """Addresses of devices found by scanning that could not be named.
+
+        Naming a device needs its local key, so devices that are not in the
+        cloud account, or that were found before logging in, end up here.
+        """
+        return list(self._unidentified)
 
     @property
     def devices(self) -> dict[str, DiscoveredDevice]:
@@ -254,10 +350,76 @@ class TuyaLocalDiscovery:
         except Exception as e:
             _LOGGER.debug("Unable to probe configured networks: %s %s", type(e), e)
 
+    async def async_scan_networks(self) -> None:
+        """Find devices on configured networks by connecting to them.
+
+        Devices on a separate VLAN never announce themselves to us, and their
+        answer to a discovery request is a new inbound connection that a
+        firewall between the networks will usually drop. Connecting to them
+        is ordinary routed traffic, so it works whenever the devices are
+        reachable at all.
+        """
+        if not self._probe_targets:
+            return
+
+        hosts = await async_find_tuya_hosts(self._probe_targets)
+        known_ips = {device.ip for device in self._seen.values()}
+        hosts = [host for host in hosts if host not in known_ips]
+        if not hosts:
+            self._unidentified = []
+            return
+
+        _LOGGER.debug("Found %d devices on configured networks", len(hosts))
+        keys = self._key_lookup() if self._key_lookup else {}
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + IDENTIFY_BUDGET
+        unidentified = []
+
+        for host in hosts:
+            device = None
+            if keys and loop.time() < deadline:
+                device = await loop.run_in_executor(None, identify_host, host, keys)
+            if device is None:
+                unidentified.append(host)
+            else:
+                self._record(device)
+
+        self._unidentified = unidentified
+
+    async def async_locate_device(
+        self,
+        device_id: str,
+        local_key: str,
+    ) -> DiscoveredDevice | None:
+        """Find the address of one known device on the configured networks."""
+        if not self._probe_targets or not local_key:
+            return None
+
+        hosts = await async_find_tuya_hosts(self._probe_targets)
+        loop = asyncio.get_running_loop()
+        for host in hosts:
+            device = await loop.run_in_executor(
+                None,
+                identify_host,
+                host,
+                {device_id: local_key},
+            )
+            if device is not None:
+                self._record(device)
+                return device
+        return None
+
     async def _async_probe_loop(self) -> None:
         """Broadcast discovery requests until discovery is stopped."""
+        loop = asyncio.get_running_loop()
+        next_scan = 0.0
         while True:
             await self.async_request_devices()
+            if self._probe_targets and loop.time() >= next_scan:
+                # Scanning is much more work than a broadcast, so it is done
+                # far less often.
+                await self.async_scan_networks()
+                next_scan = loop.time() + SCAN_INTERVAL
             await asyncio.sleep(PROBE_INTERVAL)
 
     async def _async_listen(
@@ -320,6 +482,10 @@ class TuyaLocalDiscovery:
             )
             return
 
+        self._record(device)
+
+    def _record(self, device: DiscoveredDevice) -> None:
+        """Remember a device, notifying only if it is new or has moved."""
         known = self._seen.get(device.device_id)
         self._seen[device.device_id] = device
         if known is not None and known.ip == device.ip:

@@ -82,7 +82,7 @@
             "already_configured": "Un dispozitiv cu acest ID a fost deja adăugat.",
             "not_supported": "Ne pare rău, acest dispozitiv nu este suportat.",
             "no_devices": "Nu a fost posibilă găsirea niciunui dispozitiv neînregistrat pentru cont.",
-            "no_discovered_devices": "No unconfigured devices were found on the local network. Devices only answer when they are powered on and reachable from Home Assistant. Devices on another subnet or VLAN cannot be found by broadcast, so their network needs to be listed under `discovery_networks` in configuration.yaml."
+            "no_discovered_devices": "No unconfigured devices were found. Devices are only found when they are powered on and reachable from Home Assistant. Devices on another subnet or VLAN cannot be heard, so their network needs to be listed under `discovery_networks` in configuration.yaml."
         },
         "error": {
             "connection": "Nu s-a putut conecta la dispozitiv cu aceste detalii. Poate fi o problemă temporară sau datele pot fi incorecte. Dacă ați selectat o versiune specifică a protocolului, încercați 'auto' în schimb.",

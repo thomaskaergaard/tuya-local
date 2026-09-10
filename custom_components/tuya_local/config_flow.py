@@ -55,6 +55,8 @@ DEVICE_DETAILS_URL = (
 # see the ones that are on the network when nothing has been heard yet.
 DISCOVERY_WAIT = 12
 DISCOVERY_POLL = 0.5
+# Marks a selection that is only an address, because no key identified it.
+UNIDENTIFIED_PREFIX = "host:"
 
 
 class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
@@ -67,6 +69,7 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
     __qr_code: str | None = None
     __cloud_devices: dict[str, Any] = {}
     __cloud_device: dict[str, Any] | None = None
+    __unidentified: list[str] = []
 
     def __init__(self) -> None:
         """Initialize the config flow."""
@@ -208,10 +211,19 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
         # Protocol 3.5 devices only answer when asked, so prompt them rather
         # than relying on whatever has been heard so far.
         await discovery.async_request_devices()
+        # Devices on another subnet cannot be heard at all, so look for them
+        # by connecting to the configured networks instead.
+        await discovery.async_scan_networks()
 
         configured = {
             entry.data.get(CONF_DEVICE_ID) for entry in self._async_current_entries()
         }
+        configured_hosts = {
+            entry.data.get(CONF_HOST) for entry in self._async_current_entries()
+        }
+        self.__unidentified = [
+            host for host in discovery.unidentified if host not in configured_hosts
+        ]
 
         waited = 0.0
         while True:
@@ -220,17 +232,28 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
                 for device_id, device in discovery.devices.items()
                 if device_id not in configured
             }
-            if found or waited >= DISCOVERY_WAIT:
+            if found or self.__unidentified or waited >= DISCOVERY_WAIT:
                 return found
             await asyncio.sleep(DISCOVERY_POLL)
             waited += DISCOVERY_POLL
 
     async def async_step_auto(self, user_input=None):
-        """Pick from the devices that announced themselves on the network."""
+        """Pick from the devices found on the network."""
         devices = await self._async_discovered_devices()
 
         if user_input is not None:
-            device = devices.get(user_input[CONF_DEVICE_ID])
+            choice = user_input[CONF_DEVICE_ID]
+            if choice.startswith(UNIDENTIFIED_PREFIX):
+                # A device answered on its own port but we hold no key that
+                # identifies it, so only its address is known.
+                self.__cloud_device = {
+                    "id": "",
+                    "ip": choice[len(UNIDENTIFIED_PREFIX) :],
+                    CONF_LOCAL_KEY: "",
+                }
+                return await self.async_step_local()
+
+            device = devices.get(choice)
             if device is None:
                 # It was in the list when the form was shown, so it can only
                 # have disappeared by being configured in a parallel flow.
@@ -253,7 +276,7 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
             }
             return await self.async_step_local()
 
-        if not devices:
+        if not devices and not self.__unidentified:
             return self.async_abort(reason="no_discovered_devices")
 
         cache = await async_get_cache(self.hass)
@@ -266,6 +289,13 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
             )
             for device_id, device in sorted(devices.items())
         ]
+        device_list.extend(
+            SelectOptionDict(
+                value=f"{UNIDENTIFIED_PREFIX}{host}",
+                label=f"Unknown device ({host})",
+            )
+            for host in sorted(self.__unidentified)
+        )
 
         fields: OrderedDict[vol.Marker, Any] = OrderedDict()
         fields[vol.Required(CONF_DEVICE_ID)] = SelectSelector(
@@ -510,6 +540,7 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
                 _LOGGER.warning(
                     f"Could not find device: {self.__cloud_device.get('id', 'DEVICE_KEY_UNAVAILABLE')}"
                 )
+                await self._async_locate_on_configured_networks()
             return await self.async_step_local()
 
         return self.async_show_form(
@@ -521,6 +552,31 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
             errors={},
             last_step=False,
         )
+
+    async def _async_locate_on_configured_networks(self) -> None:
+        """Look for the chosen device on networks broadcasts cannot reach.
+
+        A device on another subnet never answers a broadcast scan, but we
+        hold its local key from the cloud, so it can be recognised by
+        connecting to each address in the configured networks.
+        """
+        # Imported here so that patching it also affects this flow.
+        from . import async_start_discovery
+
+        await async_start_discovery(self.hass)
+        discovery = self.hass.data.get(DOMAIN, {}).get(DATA_DISCOVERY)
+        local_key = self.__cloud_device.get(CONF_LOCAL_KEY)
+        device_id = self.__cloud_device.get("id")
+        if discovery is None or not local_key or not device_id:
+            return
+
+        found = await discovery.async_locate_device(device_id, local_key)
+        if found is None:
+            return
+
+        _LOGGER.debug("Found %s at %s by scanning", device_id, found.ip)
+        self.__cloud_device["ip"] = found.ip
+        self.__cloud_device["version"] = found.version
 
     async def async_step_local(self, user_input=None):
         errors = {}

@@ -81,7 +81,7 @@
             "already_configured": "Ja s'ha afegit un dispositiu amb aquest ID.",
             "not_supported": "No hi ha suport per a aquest dispositiu.",
             "no_devices": "No s'ha pogut trobar cap dispositiu sense registrar per al compte.",
-            "no_discovered_devices": "No unconfigured devices were found on the local network. Devices only answer when they are powered on and reachable from Home Assistant. Devices on another subnet or VLAN cannot be found by broadcast, so their network needs to be listed under `discovery_networks` in configuration.yaml."
+            "no_discovered_devices": "No unconfigured devices were found. Devices are only found when they are powered on and reachable from Home Assistant. Devices on another subnet or VLAN cannot be heard, so their network needs to be listed under `discovery_networks` in configuration.yaml."
         },
         "error": {
             "connection": "No s'ha pogut conectar al vostre dispositiu con esos detalles. Podría ser un problema intermitente, o podrían ser incorrectos. Si seleccionó una versión de protocolo específica, intente 'auto' en su lugar.",

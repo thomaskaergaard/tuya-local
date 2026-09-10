@@ -82,7 +82,7 @@
             "already_configured": "Perangkat dengan ID tersebut pernah ditambahkan.",
             "not_supported": "Maaf, perangkat ini belum didukung.",
             "no_devices": "Tidak dapat menemukan perangkat yang tidak terdaftar untuk akun tersebut.",
-            "no_discovered_devices": "No unconfigured devices were found on the local network. Devices only answer when they are powered on and reachable from Home Assistant. Devices on another subnet or VLAN cannot be found by broadcast, so their network needs to be listed under `discovery_networks` in configuration.yaml."
+            "no_discovered_devices": "No unconfigured devices were found. Devices are only found when they are powered on and reachable from Home Assistant. Devices on another subnet or VLAN cannot be heard, so their network needs to be listed under `discovery_networks` in configuration.yaml."
         },
         "error": {
             "connection": "Tidak dapat terkoneksi ke perangkat Anda dengan detail tersebut. Bisa jadi masalah sementara, atau mungkin salah. Jika Anda memilih versi protokol tertentu, coba 'otomatis' sebagai gantinya.",

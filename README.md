@@ -77,7 +77,9 @@ Protocol 3.1 to 3.4 devices announce themselves unprompted, but 3.5 devices stay
 
 #### Devices on another subnet or VLAN
 
-Broadcasts are not usually forwarded between subnets, so devices on a separate VLAN are never heard. Those networks can be probed by address instead, which is routed normally. List them in `configuration.yaml`:
+Broadcasts are not forwarded between subnets, so devices on a separate VLAN are never heard. A device's answer to a discovery request does not help either, because it arrives as a new inbound connection which a firewall between the networks will normally drop.
+
+Those networks are therefore searched by connecting to each address on the Tuya device port instead. That is ordinary outgoing traffic, so it is routed and allowed like any other connection Tuya Local makes to a device, and it works for every protocol version. List the networks in `configuration.yaml`:
 
 ```yaml
 tuya_local:
@@ -86,9 +88,9 @@ tuya_local:
     - 192.168.5.11
 ```
 
-Each entry may be a single address or a CIDR range, and a range is limited to 1024 addresses. Every address in the list is sent a discovery request, and devices reply directly to Home Assistant. This only finds protocol 3.5 devices, as earlier protocol versions have no way to be asked; add those manually or through the cloud assisted flow.
+Each entry may be a single address or a CIDR range, and a range is limited to 1024 addresses. A whole `/24` takes about ten seconds to search. It is searched when the automatic setup choice is used, and every five minutes in the background so that devices which change address are repaired.
 
-Home Assistant also needs to be reachable from the device's network for the reply to arrive, so any firewall between the two must allow UDP port 7000 in both directions.
+A device only identifies itself to someone who already holds its local key, so devices found this way are named once you have logged in to the cloud, and are otherwise offered as "Unknown device" with just their address, leaving you to fill in the device id and local key. The cloud assisted flow also searches these networks, so choosing a device from your Tuya account will find it on another VLAN without you needing to know its address.
 
 Note that discovery only works if the devices are on the same subnet as Home Assistant, as broadcasts are not usually forwarded between subnets.
 

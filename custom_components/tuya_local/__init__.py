@@ -33,6 +33,7 @@ from .const import (
     CONF_POLL_ONLY,
     CONF_PROTOCOL_VERSION,
     CONF_TYPE,
+    DATA_CLOUD_CACHE,
     DATA_DISCOVERY,
     DATA_DISCOVERY_NETWORKS,
     DOMAIN,
@@ -1008,6 +1009,15 @@ async def async_start_discovery(hass: HomeAssistant) -> None:
     if hass.data[DOMAIN].get(DATA_DISCOVERY) is not None:
         return
 
+    def _cached_local_keys() -> dict[str, str]:
+        """Local keys known from a cloud login, for identifying devices.
+
+        Read lazily so that devices found later can be named as soon as a
+        cloud login makes their keys available.
+        """
+        cache = hass.data[DOMAIN].get(DATA_CLOUD_CACHE)
+        return cache.all_local_keys() if cache else {}
+
     async def _async_device_discovered(device: DiscoveredDevice) -> None:
         discovery_flow.async_create_flow(
             hass,
@@ -1024,6 +1034,7 @@ async def async_start_discovery(hass: HomeAssistant) -> None:
     discovery = TuyaLocalDiscovery(
         _async_device_discovered,
         hass.data[DOMAIN].get(DATA_DISCOVERY_NETWORKS),
+        _cached_local_keys,
     )
     await discovery.async_start()
     hass.data[DOMAIN][DATA_DISCOVERY] = discovery

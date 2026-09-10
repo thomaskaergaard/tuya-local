@@ -82,7 +82,7 @@
             "already_configured": "Un appareil avec cet ID a déjà été ajouté.",
             "not_supported": "Désolé, il n'y a pas de support pour cet appareil.",
             "no_devices": "Impossible de trouver des appareils non enregistrés pour le compte.",
-            "no_discovered_devices": "Aucun appareil non configuré n'a été trouvé sur le réseau local. Les appareils ne répondent que s'ils sont allumés et joignables depuis Home Assistant. Les appareils situés sur un autre sous-réseau ou VLAN ne peuvent pas être trouvés par diffusion : leur réseau doit être indiqué sous `discovery_networks` dans configuration.yaml."
+            "no_discovered_devices": "Aucun appareil non configuré n'a été trouvé. Les appareils ne sont trouvés que s'ils sont allumés et joignables depuis Home Assistant. Les appareils situés sur un autre sous-réseau ou VLAN ne peuvent pas être entendus : leur réseau doit être indiqué sous `discovery_networks` dans configuration.yaml."
         },
         "error": {
             "connection": "Impossible de se connecter à votre appareil avec ces détails. Il peut s'agir d'un problème intermittent, ou ils peuvent être incorrects. Si vous avez sélectionné une version de protocole spécifique, essayez 'auto' à la place.",

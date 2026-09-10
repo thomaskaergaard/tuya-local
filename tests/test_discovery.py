@@ -28,8 +28,10 @@ from custom_components.tuya_local.discovery import (
     DISCOVERY_PORTS,
     DiscoveredDevice,
     TuyaLocalDiscovery,
+    async_find_tuya_hosts,
     build_probe_request,
     expand_probe_network,
+    identify_host,
     parse_discovery_message,
 )
 
@@ -279,6 +281,116 @@ async def test_no_probing_without_configured_networks(mocker, hass):
     await discovery.async_request_devices()
 
     probes.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_scan_finds_hosts_that_accept_connections(mocker):
+    """Only addresses that answer on the device port are devices."""
+
+    async def connect(host, port):
+        if host != "192.168.3.11":
+            raise OSError("no route to host")
+        return mocker.MagicMock(), mocker.MagicMock(wait_closed=mocker.AsyncMock())
+
+    mocker.patch("asyncio.open_connection", side_effect=connect)
+    found = await async_find_tuya_hosts(["192.168.3.10", "192.168.3.11"])
+    assert found == ["192.168.3.11"]
+
+
+@pytest.mark.asyncio
+async def test_scan_without_targets_does_nothing(mocker):
+    """No configured networks means there is nothing to connect to."""
+    connect = mocker.patch("asyncio.open_connection")
+    assert await async_find_tuya_hosts([]) == []
+    connect.assert_not_called()
+
+
+def test_identify_host_matches_the_key_that_works(mocker):
+    """A device is named by the key that it accepts."""
+
+    def make_device(device_id, host, local_key, version):
+        device = mocker.MagicMock()
+        device.status.return_value = (
+            {"dps": {"1": True}}
+            if local_key == "rightkey" and version == 3.4
+            else {"Error": "Check device key or version"}
+        )
+        return device
+
+    mocker.patch(
+        "custom_components.tuya_local.discovery.tinytuya.Device",
+        side_effect=make_device,
+    )
+    found = identify_host(
+        "192.168.3.11", {"wrongid": "wrongkey", "rightid": "rightkey"}
+    )
+    assert found == DiscoveredDevice(
+        device_id="rightid",
+        ip="192.168.3.11",
+        version="3.4",
+    )
+
+
+def test_identify_host_gives_up_when_no_key_works(mocker):
+    """Devices that are not in the cloud account cannot be named."""
+    device = mocker.MagicMock()
+    device.status.return_value = {"Error": "Check device key or version"}
+    mocker.patch(
+        "custom_components.tuya_local.discovery.tinytuya.Device",
+        return_value=device,
+    )
+    assert identify_host("192.168.3.11", {"id": "key"}) is None
+
+
+@pytest.mark.asyncio
+async def test_scan_reports_devices_it_cannot_name(mocker, hass):
+    """Devices found without a matching key are offered by address."""
+    mocker.patch(
+        "custom_components.tuya_local.discovery.async_find_tuya_hosts",
+        return_value=["192.168.3.11", "192.168.3.12"],
+    )
+    mocker.patch(
+        "custom_components.tuya_local.discovery.identify_host",
+        side_effect=lambda host, keys: (
+            DiscoveredDevice(device_id=DEVICE_ID, ip=host, version="3.4")
+            if host == "192.168.3.11"
+            else None
+        ),
+    )
+    on_device = mocker.AsyncMock()
+    discovery = TuyaLocalDiscovery(
+        on_device,
+        ["192.168.3.0/30"],
+        lambda: {DEVICE_ID: TESTKEY},
+    )
+    await discovery.async_scan_networks()
+    await asyncio.sleep(0)
+
+    assert discovery.devices[DEVICE_ID].ip == "192.168.3.11"
+    assert discovery.unidentified == ["192.168.3.12"]
+
+
+@pytest.mark.asyncio
+async def test_locate_device_finds_one_known_device(mocker, hass):
+    """The cloud flow knows the key, so it can pinpoint one device."""
+    mocker.patch(
+        "custom_components.tuya_local.discovery.async_find_tuya_hosts",
+        return_value=["192.168.3.11", "192.168.3.12"],
+    )
+    mocker.patch(
+        "custom_components.tuya_local.discovery.identify_host",
+        side_effect=lambda host, keys: (
+            DiscoveredDevice(device_id=DEVICE_ID, ip=host, version="3.5")
+            if host == "192.168.3.12"
+            else None
+        ),
+    )
+    discovery = TuyaLocalDiscovery(mocker.AsyncMock(), ["192.168.3.0/30"])
+    found = await discovery.async_locate_device(DEVICE_ID, TESTKEY)
+
+    assert found is not None
+    assert found.ip == "192.168.3.12"
+    assert found.version == "3.5"
 
 
 @pytest.mark.asyncio

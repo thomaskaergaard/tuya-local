@@ -82,7 +82,7 @@
             "already_configured": "Um dispositivo com esse ID já foi adicionado.",
             "not_supported": "Desculpe, não há suporte para este dispositivo.",
             "no_devices": "Não foi possível encontrar nenhum dispositivo ainda não registado para a conta.",
-            "no_discovered_devices": "Não foram encontrados dispositivos por configurar na rede local. Os dispositivos só respondem quando estão ligados e acessíveis a partir do Home Assistant. Os dispositivos noutra sub-rede ou VLAN não podem ser encontrados por difusão, pelo que a sua rede tem de ser indicada em `discovery_networks` no configuration.yaml."
+            "no_discovered_devices": "Não foram encontrados dispositivos por configurar. Os dispositivos só são encontrados quando estão ligados e acessíveis a partir do Home Assistant. Os dispositivos noutra sub-rede ou VLAN não podem ser ouvidos, pelo que a sua rede tem de ser indicada em `discovery_networks` no configuration.yaml."
         },
         "error": {
             "connection": "Não foi possível conectar ao seu dispositivo com esses detalhes. Pode ser um problema intermitente ou eles podem estar incorretos. Se você selecionou uma versão de protocolo específica, tente 'auto' em vez disso.",

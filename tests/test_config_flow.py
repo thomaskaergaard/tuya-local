@@ -640,10 +640,17 @@ def fake_discovery(hass, mocker):
     class FakeDiscovery:
         def __init__(self):
             self.devices = {}
+            self.unidentified = []
             self.requests = 0
 
         async def async_request_devices(self):
             self.requests += 1
+
+        async def async_scan_networks(self):
+            pass
+
+        async def async_locate_device(self, device_id, local_key):
+            return None
 
     discovery = FakeDiscovery()
     hass.data.setdefault(DOMAIN, {})[DATA_DISCOVERY] = discovery
@@ -757,6 +764,60 @@ async def test_flow_auto_prefills_local_step(hass, fake_discovery, mocker):
     assert defaults[CONF_HOST] == "10.0.0.5"
     assert defaults[CONF_LOCAL_KEY] == TESTKEY
     assert defaults[CONF_PROTOCOL_VERSION] == "3.3"
+
+
+@pytest.mark.asyncio
+async def test_flow_auto_offers_unidentified_hosts(hass, fake_discovery, mocker):
+    """Devices found by scanning but not named are offered by address."""
+    mocker.patch.object(config_flow, "DISCOVERY_WAIT", 0)
+    fake_discovery.unidentified = ["192.168.3.11"]
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": "user"},
+        data={"setup_mode": "auto"},
+    )
+    assert result["step_id"] == "auto"
+    options = result["data_schema"].schema[CONF_DEVICE_ID].config["options"]
+    assert options == [
+        {"value": "host:192.168.3.11", "label": "Unknown device (192.168.3.11)"}
+    ]
+
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {CONF_DEVICE_ID: "host:192.168.3.11"},
+    )
+    assert result["step_id"] == "local"
+    defaults = {
+        marker.schema: marker.default()
+        for marker in result["data_schema"].schema
+        if callable(marker.default)
+    }
+    assert defaults[CONF_HOST] == "192.168.3.11"
+
+
+@pytest.mark.asyncio
+async def test_flow_auto_hides_configured_hosts(hass, fake_discovery, mocker):
+    """An address that is already set up is not offered again."""
+    mocker.patch.object(config_flow, "DISCOVERY_WAIT", 0)
+    MockConfigEntry(
+        domain=DOMAIN,
+        version=13,
+        unique_id="deviceid",
+        data={
+            CONF_DEVICE_ID: "deviceid",
+            CONF_HOST: "192.168.3.11",
+            CONF_LOCAL_KEY: TESTKEY,
+            CONF_TYPE: "kogan_kahtp_heater",
+        },
+    ).add_to_hass(hass)
+    fake_discovery.unidentified = ["192.168.3.11"]
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": "user"},
+        data={"setup_mode": "auto"},
+    )
+    assert result["type"] == FlowResultType.ABORT
+    assert result["reason"] == "no_discovered_devices"
 
 
 @pytest.mark.asyncio
