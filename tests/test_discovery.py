@@ -21,6 +21,7 @@ from custom_components.tuya_local.const import (
     CONF_LOCAL_KEY,
     CONF_POLL_ONLY,
     CONF_PROTOCOL_VERSION,
+    CONF_QUICK_ADD,
     CONF_TYPE,
     DOMAIN,
 )
@@ -512,7 +513,9 @@ async def test_discovery_prefills_cached_local_key(hass):
     assert result["step_id"] == "discovery_confirm"
     assert "Cached light" in result["description_placeholders"]["device_name"]
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_QUICK_ADD: False}
+    )
     assert result["step_id"] == "local"
     defaults = {
         marker.schema: marker.default()
@@ -756,3 +759,69 @@ async def test_cloud_cache_survives_reload(hass):
     assert reloaded.auth == {"user_code": "abc"}
     assert reloaded.get_local_key(DEVICE_ID) == TESTKEY
     assert reloaded.get_device(DEVICE_ID)["name"] == "Light"
+
+
+@pytest.mark.asyncio
+async def test_discovery_quick_add_creates_entry(hass, mocker):
+    """A cached key and an exact match leave nothing worth asking."""
+    mocker.patch("custom_components.tuya_local.async_setup_entry", return_value=True)
+    cache = await async_get_cache(hass)
+    await cache.async_update_devices(
+        {
+            DEVICE_ID: {
+                "id": DEVICE_ID,
+                CONF_LOCAL_KEY: TESTKEY,
+                "name": "Cached light",
+                "product_id": "abcdefghijklmnop",
+                "product_name": "Light",
+            }
+        }
+    )
+    mock_device = mocker.MagicMock()
+    mock_device._protocol_configured = "3.3"
+    mock_device._product_ids = []
+    mock_type = mocker.MagicMock()
+    mock_type.legacy_type = "kogan_kahtp_heater"
+    mock_type.config_type = "kogan_kahtp_heater"
+    mock_type.match_quality.return_value = 100
+    mock_type.product_display_entries.return_value = [(None, None)]
+    mock_device.async_possible_types = mocker.AsyncMock(return_value=[mock_type])
+    mocker.patch(
+        "custom_components.tuya_local.config_flow.async_test_connection",
+        return_value=mock_device,
+    )
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": SOURCE_INTEGRATION_DISCOVERY},
+        data={
+            CONF_DEVICE_ID: DEVICE_ID,
+            CONF_HOST: "192.168.1.50",
+            "version": "3.3",
+        },
+    )
+    assert result["step_id"] == "discovery_confirm"
+
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_QUICK_ADD: True}
+    )
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+    assert result["title"] == "Cached light"
+    assert result["data"][CONF_HOST] == "192.168.1.50"
+    assert result["data"][CONF_LOCAL_KEY] == TESTKEY
+    assert result["data"][CONF_TYPE] == "kogan_kahtp_heater"
+
+
+@pytest.mark.asyncio
+async def test_discovery_quick_add_falls_back_without_a_key(hass):
+    """Without a key the connection form is still needed."""
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": SOURCE_INTEGRATION_DISCOVERY},
+        data={CONF_DEVICE_ID: DEVICE_ID, CONF_HOST: "192.168.1.50"},
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_QUICK_ADD: True}
+    )
+    assert result["type"] == FlowResultType.FORM
+    assert result["step_id"] == "local"

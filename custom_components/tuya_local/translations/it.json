@@ -39,7 +39,10 @@
             },
             "discovery_confirm": {
                 "title": "Aggiungi il dispositivo rilevato",
-                "description": "{device_name}È stato trovato un dispositivo Tuya nella tua rete.\n\nID dispositivo: `{device_id}`\nIndirizzo IP: `{host}`\n\nI dispositivi elencati come \"Unknown device\" hanno risposto sulla propria porta, ma un dispositivo rivela la propria identità solo a chi possiede già la sua chiave locale. Sceglierne uno ti chiederà di accedere al tuo account Tuya, che fornisce la chiave e compila automaticamente il resto.\n\nChiudi l'app mobile prima di continuare, poiché le sue connessioni al dispositivo spesso bloccano la comunicazione di Tuya Local."
+                "description": "{device_name}È stato trovato un dispositivo Tuya nella tua rete.\n\nID dispositivo: `{device_id}`\nIndirizzo IP: `{host}`\n\nI dispositivi elencati come \"Unknown device\" hanno risposto sulla propria porta, ma un dispositivo rivela la propria identità solo a chi possiede già la sua chiave locale. Sceglierne uno ti chiederà di accedere al tuo account Tuya, che fornisce la chiave e compila automaticamente il resto.\n\nChiudi l'app mobile prima di continuare, poiché le sue connessioni al dispositivo spesso bloccano la comunicazione di Tuya Local.",
+                "data": {
+                    "quick_add": "Aggiungi senza altre domande"
+                }
             },
             "cloud": {
                 "title": "Accedi a Tuya",

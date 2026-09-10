@@ -39,7 +39,10 @@
             },
             "discovery_confirm": {
                 "title": "Lägg till upptäckt enhet",
-                "description": "{device_name}En Tuya-enhet hittades i ditt nätverk.\n\nEnhets-ID: `{device_id}`\nIP-adress: `{host}`\n\nEnheter som visas som \"Unknown device\" svarade på sin egen port, men en enhet avslöjar bara sin identitet för någon som redan har dess lokala nyckel. Om du väljer en av dem ombeds du logga in på ditt Tuya-konto, som ger nyckeln och fyller i resten automatiskt.\n\nStäng mobilappen innan du fortsätter, eftersom dess anslutningar till enheten ofta blockerar Tuya Locals kommunikation med den."
+                "description": "{device_name}En Tuya-enhet hittades i ditt nätverk.\n\nEnhets-ID: `{device_id}`\nIP-adress: `{host}`\n\nEnheter som visas som \"Unknown device\" svarade på sin egen port, men en enhet avslöjar bara sin identitet för någon som redan har dess lokala nyckel. Om du väljer en av dem ombeds du logga in på ditt Tuya-konto, som ger nyckeln och fyller i resten automatiskt.\n\nStäng mobilappen innan du fortsätter, eftersom dess anslutningar till enheten ofta blockerar Tuya Locals kommunikation med den.",
+                "data": {
+                    "quick_add": "Lägg till utan fler frågor"
+                }
             },
             "cloud": {
                 "title": "Logga in på Tuya",

@@ -39,7 +39,10 @@
             },
             "discovery_confirm": {
                 "title": "Add discovered device",
-                "description": "{device_name}A Tuya device was found on your network.\n\nDevice ID: `{device_id}`\nIP address: `{host}`\n\nDevices listed as \"Unknown device\" answered on their own port, but a device only reveals its identity to someone who already holds its local key. Choosing one asks you to sign in to your Tuya account, which supplies the key and fills in the rest automatically.\n\nShut down the mobile app before continuing, as its connections to the device will often block Tuya Local communication with it."
+                "description": "{device_name}A Tuya device was found on your network.\n\nDevice ID: `{device_id}`\nIP address: `{host}`\n\nDevices listed as \"Unknown device\" answered on their own port, but a device only reveals its identity to someone who already holds its local key. Choosing one asks you to sign in to your Tuya account, which supplies the key and fills in the rest automatically.\n\nShut down the mobile app before continuing, as its connections to the device will often block Tuya Local communication with it.",
+                "data": {
+                    "quick_add": "Add without further questions"
+                }
             },
             "cloud": {
                 "title": "Přihlaste se do Tuya",

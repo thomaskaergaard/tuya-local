@@ -146,11 +146,26 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
     async def async_step_discovery_confirm(self, user_input=None):
         """Confirm adding a locally discovered device."""
         if user_input is not None:
+            self.__quick_add = user_input.get(CONF_QUICK_ADD, False)
+            version = self.__cloud_device.get("version")
+            if self.__quick_add and self.__cloud_device[CONF_LOCAL_KEY]:
+                # Everything the connection form would ask for is already
+                # known, so answer it rather than showing it. It is shown
+                # again with the error if the connection does not work.
+                return await self.async_step_local(
+                    {
+                        CONF_DEVICE_ID: self.__cloud_device["id"],
+                        CONF_HOST: self.__cloud_device["ip"],
+                        CONF_LOCAL_KEY: self.__cloud_device[CONF_LOCAL_KEY],
+                        CONF_PROTOCOL_VERSION: (str(version) if version else "auto"),
+                        CONF_POLL_ONLY: False,
+                    }
+                )
             return await self.async_step_local()
 
         return self.async_show_form(
             step_id="discovery_confirm",
-            data_schema=vol.Schema({}),
+            data_schema=vol.Schema({vol.Required(CONF_QUICK_ADD, default=True): bool}),
             description_placeholders={
                 "device_name": self._device_name_placeholder,
                 "device_id": self.__cloud_device["id"],
