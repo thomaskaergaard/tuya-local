@@ -14,7 +14,8 @@
                 "title": "Appareils découverts",
                 "description": "Ces appareils Tuya se signalent sur votre réseau local et ne sont pas encore configurés.\n\nLes appareils affichés comme \"Unknown device\" ont répondu sur leur propre port, mais un appareil ne révèle son identité qu'à celui qui possède déjà sa clé locale. En choisir un vous demandera de vous connecter à votre compte Tuya, qui fournit la clé et remplit le reste automatiquement.\n\nFermez l'application mobile avant de continuer, car ses connexions à l'appareil bloquent souvent la communication de Tuya Local.",
                 "data": {
-                    "device_id": "Appareil :"
+                    "device_id": "Appareil :",
+                    "quick_add": "Ajouter sans autre question"
                 }
             },
             "account": {

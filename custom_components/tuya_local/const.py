@@ -15,6 +15,7 @@ CONF_POLL_ONLY = "poll_only"
 CONF_DEVICE_CID = "device_cid"
 CONF_PRODUCT_ID = "product_id"
 CONF_PROTOCOL_VERSION = "protocol_version"
+CONF_QUICK_ADD = "quick_add"
 API_PROTOCOL_VERSIONS = [3.3, 3.1, 3.2, 3.4, 3.5, 3.22]
 
 CONF_APP_TYPE = "tuya_app_type"

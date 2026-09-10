@@ -14,7 +14,8 @@
                 "title": "Oppdagede enheter",
                 "description": "Disse Tuya-enhetene annonserer seg i det lokale nettverket ditt og er ikke satt opp ennå.\n\nEnheter som vises som \"Unknown device\" svarte på sin egen port, men en enhet røper bare identiteten sin til noen som allerede har den lokale nøkkelen. Velger du en av dem, blir du bedt om å logge inn på Tuya-kontoen din, som gir nøkkelen og fyller ut resten automatisk.\n\nAvslutt mobilappen før du fortsetter, siden tilkoblingene dens til enheten ofte blokkerer kommunikasjonen til Tuya Local.",
                 "data": {
-                    "device_id": "Enhet:"
+                    "device_id": "Enhet:",
+                    "quick_add": "Legg til uten flere spørsmål"
                 }
             },
             "account": {

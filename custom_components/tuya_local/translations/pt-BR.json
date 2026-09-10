@@ -14,7 +14,8 @@
                 "title": "Dispositivos descobertos",
                 "description": "Estes dispositivos Tuya estão se anunciando na sua rede local e ainda não foram configurados.\n\nOs dispositivos listados como \"Unknown device\" responderam na própria porta, mas um dispositivo só revela sua identidade a quem já possui sua chave local. Escolher um deles pedirá que você faça login na sua conta Tuya, que fornece a chave e preenche o restante automaticamente.\n\nFeche o aplicativo móvel antes de continuar, pois suas conexões com o dispositivo costumam bloquear a comunicação do Tuya Local.",
                 "data": {
-                    "device_id": "Dispositivo:"
+                    "device_id": "Dispositivo:",
+                    "quick_add": "Adicionar sem mais perguntas"
                 }
             },
             "account": {

@@ -13,7 +13,8 @@
                 "title": "Discovered devices",
                 "description": "These Tuya devices are announcing themselves on your local network and are not set up yet.\n\nDevices listed as \"Unknown device\" answered on their own port, but a device only reveals its identity to someone who already holds its local key. Choosing one asks you to sign in to your Tuya account, which supplies the key and fills in the rest automatically.\n\nShut down the mobile app before continuing, as its connections to the device will often block Tuya Local communication with it.",
                 "data": {
-                    "device_id": "Device:"
+                    "device_id": "Device:",
+                    "quick_add": "Add without further questions"
                 }
             },
             "account": {

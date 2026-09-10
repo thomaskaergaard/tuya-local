@@ -14,7 +14,8 @@
                 "title": "Gefundene Geräte",
                 "description": "Diese Tuya-Geräte melden sich in deinem lokalen Netzwerk und sind noch nicht eingerichtet.\n\nAls \"Unknown device\" aufgeführte Geräte haben auf ihrem eigenen Port geantwortet, aber ein Gerät gibt seine Identität nur an jemanden preis, der bereits seinen lokalen Schlüssel besitzt. Wenn du eines auswählst, wirst du zur Anmeldung bei deinem Tuya-Konto aufgefordert, das den Schlüssel liefert und den Rest automatisch ausfüllt.\n\nBeende die mobile App, bevor du fortfährst, da ihre Verbindungen zum Gerät die Kommunikation von Tuya Local oft blockieren.",
                 "data": {
-                    "device_id": "Gerät:"
+                    "device_id": "Gerät:",
+                    "quick_add": "Ohne weitere Fragen hinzufügen"
                 }
             },
             "account": {

@@ -37,6 +37,7 @@ from .const import (
     CONF_POLL_ONLY,
     CONF_PRODUCT_ID,
     CONF_PROTOCOL_VERSION,
+    CONF_QUICK_ADD,
     CONF_TYPE,
     CONF_USER_CODE,
     DATA_DISCOVERY,
@@ -80,11 +81,13 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
     __unidentified: list[str] = []
     __pending_host: str | None = None
     __oem_cloud: OemCloud | None = None
+    __quick_add: bool = False
 
     def __init__(self) -> None:
         """Initialize the config flow."""
         self.cloud = None
         self.__oem_cloud = None
+        self.__quick_add = False
 
     async def async_init_cloud(self):
         """Create the cloud interface, backed by the persistent cache."""
@@ -289,6 +292,22 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
                 "local_product_id": device.product_id,
                 "version": device.version,
             }
+            self.__quick_add = user_input.get(CONF_QUICK_ADD, False)
+            if self.__quick_add and self.__cloud_device[CONF_LOCAL_KEY] and device.ip:
+                # Everything the connection form would ask for is already
+                # known, so answer it rather than showing it. It is shown
+                # again with the error if the connection does not work.
+                return await self.async_step_local(
+                    {
+                        CONF_DEVICE_ID: device.device_id,
+                        CONF_HOST: device.ip,
+                        CONF_LOCAL_KEY: self.__cloud_device[CONF_LOCAL_KEY],
+                        CONF_PROTOCOL_VERSION: (
+                            str(device.version) if device.version else "auto"
+                        ),
+                        CONF_POLL_ONLY: False,
+                    }
+                )
             return await self.async_step_local()
 
         if not devices and not self.__unidentified:
@@ -316,6 +335,7 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
         fields[vol.Required(CONF_DEVICE_ID)] = SelectSelector(
             SelectSelectorConfig(options=device_list, mode=SelectSelectorMode.DROPDOWN)
         )
+        fields[vol.Required(CONF_QUICK_ADD, default=True)] = bool
 
         return self.async_show_form(
             step_id="auto",
@@ -944,6 +964,8 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
             "Include the previous log messages with any new device request to https://github.com/make-all/tuya-local/issues/",
         )
         if type_options:
+            if self.__quick_add and self._is_unambiguous(all_matches, best_match):
+                return await self._async_quick_entry(best_matching_key)
             detected = getattr(self, "_auto_detected_protocol", None)
             schema = vol.Schema(
                 {
@@ -974,6 +996,37 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_step_select_type_auto_detected(self, user_input=None):
         return await self.async_step_select_type(user_input)
+
+    @staticmethod
+    def _is_unambiguous(all_matches, best_match) -> bool:
+        """Is there a single best configuration for the device?
+
+        A perfect match is only worth skipping the questions for when
+        nothing else matches equally well, otherwise the choice between
+        them is exactly what needs to be asked.
+        """
+        if best_match < 100:
+            return False
+        return len([1 for _, q in all_matches if q >= best_match]) == 1
+
+    async def _async_quick_entry(self, matching_key):
+        """Add the device without asking anything more."""
+        parts = matching_key.split("||", 2)
+        self.data[CONF_TYPE] = parts[0]
+        if len(parts) > 1 and parts[1]:
+            self.data[CONF_MANUFACTURER] = parts[1]
+        if len(parts) > 2 and parts[2]:
+            self.data[CONF_MODEL] = parts[2]
+
+        config = await self.hass.async_add_executor_job(
+            get_config,
+            self.data[CONF_TYPE],
+        )
+        name = config.name
+        if self.__cloud_device and self.__cloud_device.get("name"):
+            name = self.__cloud_device["name"]
+        _LOGGER.debug("Quick adding %s as %s", name, self.data[CONF_TYPE])
+        return self.async_create_entry(title=name, data=self.data)
 
     async def async_step_choose_entities(self, user_input=None):
         config = await self.hass.async_add_executor_job(

@@ -21,6 +21,7 @@ from custom_components.tuya_local.const import (
     CONF_POLL_ONLY,
     CONF_PRODUCT_ID,
     CONF_PROTOCOL_VERSION,
+    CONF_QUICK_ADD,
     CONF_TYPE,
     DATA_DISCOVERY,
     DOMAIN,
@@ -753,7 +754,7 @@ async def test_flow_auto_prefills_local_step(hass, fake_discovery, mocker):
 
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"],
-        {CONF_DEVICE_ID: "deviceid"},
+        {CONF_DEVICE_ID: "deviceid", CONF_QUICK_ADD: False},
     )
     assert result["step_id"] == "local"
     defaults = {
@@ -1410,3 +1411,155 @@ async def test_cloud_product_id_is_kept_in_the_entry(hass, fake_discovery, mocke
 
     flow = hass.config_entries.flow._progress[result["flow_id"]]
     assert flow.data[CONF_PRODUCT_ID] == "prodid"
+
+
+async def _discovered_with_key(hass, mocker, version="3.3"):
+    """A discovered device whose key is already known from the cloud."""
+    cache = await async_get_cache(hass)
+    await cache.async_update_devices(
+        {
+            "deviceid": {
+                "id": "deviceid",
+                CONF_LOCAL_KEY: TESTKEY,
+                "name": "Kitchen light",
+                "product_name": "Bulb",
+            }
+        }
+    )
+    return DiscoveredDevice(
+        device_id="deviceid",
+        ip="10.0.0.5",
+        product_id="prodid",
+        version=version,
+    )
+
+
+@pytest.mark.asyncio
+async def test_quick_add_skips_the_remaining_questions(
+    hass, bypass_setup, fake_discovery, mocker
+):
+    """Nothing is worth asking when the address, key and type are all known."""
+    fake_discovery.devices = {"deviceid": await _discovered_with_key(hass, mocker)}
+
+    mock_device = mocker.MagicMock()
+    mock_device._protocol_configured = "3.3"
+    mock_device._product_ids = []
+    setup_device_mock(mock_device, mocker, devtype="kogan_kahtp_heater")
+    mocker.patch(
+        "custom_components.tuya_local.config_flow.async_test_connection",
+        return_value=mock_device,
+    )
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": "user"},
+        data={"setup_mode": "auto"},
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {CONF_DEVICE_ID: "deviceid", CONF_QUICK_ADD: True},
+    )
+
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+    # Named from the cloud, not from the configuration it matched.
+    assert result["title"] == "Kitchen light"
+    assert result["data"][CONF_DEVICE_ID] == "deviceid"
+    assert result["data"][CONF_HOST] == "10.0.0.5"
+    assert result["data"][CONF_LOCAL_KEY] == TESTKEY
+    assert result["data"][CONF_TYPE] == "kogan_kahtp_heater"
+
+
+@pytest.mark.asyncio
+async def test_quick_add_still_asks_when_the_match_is_ambiguous(
+    hass, fake_discovery, mocker
+):
+    """Choosing between equally good configurations is the whole question."""
+    fake_discovery.devices = {"deviceid": await _discovered_with_key(hass, mocker)}
+
+    mock_device = mocker.MagicMock()
+    mock_device._protocol_configured = "3.3"
+    mock_device._product_ids = []
+    types = []
+    for name in ("kogan_kahtp_heater", "goldair_gpph_heater"):
+        t = mocker.MagicMock()
+        t.legacy_type = name
+        t.config_type = name
+        t.match_quality.return_value = 100
+        t.product_display_entries.return_value = [(None, None)]
+        types.append(t)
+    mock_device.async_possible_types = mocker.AsyncMock(return_value=types)
+    mocker.patch(
+        "custom_components.tuya_local.config_flow.async_test_connection",
+        return_value=mock_device,
+    )
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": "user"},
+        data={"setup_mode": "auto"},
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {CONF_DEVICE_ID: "deviceid", CONF_QUICK_ADD: True},
+    )
+
+    assert result["type"] == FlowResultType.FORM
+    assert result["step_id"] == "select_type"
+
+
+@pytest.mark.asyncio
+async def test_quick_add_still_asks_when_the_match_is_imperfect(
+    hass, fake_discovery, mocker
+):
+    """A partial match is a guess, so it has to be confirmed."""
+    fake_discovery.devices = {"deviceid": await _discovered_with_key(hass, mocker)}
+
+    mock_device = mocker.MagicMock()
+    mock_device._protocol_configured = "3.3"
+    mock_device._product_ids = []
+    setup_device_mock(mock_device, mocker, devtype="kogan_kahtp_heater")
+    mock_device.async_possible_types.return_value[0].match_quality.return_value = 85
+    mocker.patch(
+        "custom_components.tuya_local.config_flow.async_test_connection",
+        return_value=mock_device,
+    )
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": "user"},
+        data={"setup_mode": "auto"},
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {CONF_DEVICE_ID: "deviceid", CONF_QUICK_ADD: True},
+    )
+
+    assert result["type"] == FlowResultType.FORM
+    assert result["step_id"] == "select_type"
+
+
+@pytest.mark.asyncio
+async def test_quick_add_falls_back_when_the_key_is_unknown(
+    hass, fake_discovery, mocker
+):
+    """Without a key there is still a form to fill in."""
+    mocker.patch.object(config_flow, "DISCOVERY_WAIT", 0)
+    fake_discovery.devices = {
+        "deviceid": DiscoveredDevice(
+            device_id="deviceid",
+            ip="10.0.0.5",
+            version="3.3",
+        ),
+    }
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": "user"},
+        data={"setup_mode": "auto"},
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {CONF_DEVICE_ID: "deviceid", CONF_QUICK_ADD: True},
+    )
+
+    assert result["type"] == FlowResultType.FORM
+    assert result["step_id"] == "local"
