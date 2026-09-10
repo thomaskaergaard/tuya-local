@@ -1,0 +1,104 @@
+name: CCT lightbulb
+entities:
+  - entity: light
+    dps:
+      - id: 20
+        type: boolean
+        name: switch
+      - id: 21
+        type: string
+        name: effect
+        mapping:
+          - dps_val: white
+            value: none
+          # colour is offered by the firmware, but these bulbs are
+          # tuneable white only and have no colour dp to go with it
+          - dps_val: colour
+            value: none
+            hidden: true
+          - dps_val: scene
+            value: Scene
+          - dps_val: music
+            value: Music
+      - id: 22
+        name: brightness
+        type: integer
+        optional: true
+        range:
+          min: 10
+          max: 1000
+        mapping:
+          - dps_val: null
+            value: 0
+      - id: 23
+        name: color_temp
+        type: integer
+        optional: true
+        range:
+          min: 0
+          max: 1000
+        mapping:
+          - target_range:
+              min: 2700
+              max: 6500
+      - id: 28
+        name: control_data
+        type: string
+        optional: true
+      - id: 30
+        name: rhythm_mode
+        type: base64
+        optional: true
+      - id: 31
+        name: sleep_mode
+        type: base64
+        optional: true
+      - id: 32
+        name: wakeup_mode
+        type: base64
+        optional: true
+      - id: 33
+        name: power_memory
+        type: base64
+        optional: true
+      - id: 41
+        name: remote_switch
+        type: boolean
+        optional: true
+  - entity: time
+    translation_key: timer
+    category: config
+    dps:
+      - id: 26
+        type: integer
+        optional: true
+        name: second
+        range:
+          min: 0
+          max: 86400
+  - entity: switch
+    translation_key: do_not_disturb
+    category: config
+    hidden: unavailable
+    dps:
+      - id: 34
+        type: boolean
+        optional: true
+        name: switch
+      - id: 34
+        type: boolean
+        optional: true
+        name: available
+        mapping:
+          - dps_val: null
+            value: false
+          - value: true
+  - entity: text
+    translation_key: scene
+    category: config
+    hidden: true
+    dps:
+      - id: 25
+        name: value
+        type: hex
+        optional: true
