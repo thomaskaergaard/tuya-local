@@ -28,6 +28,8 @@ from custom_components.tuya_local.discovery import (
     DISCOVERY_PORTS,
     DiscoveredDevice,
     TuyaLocalDiscovery,
+    build_probe_request,
+    expand_probe_network,
     parse_discovery_message,
 )
 
@@ -223,6 +225,60 @@ async def test_probe_failure_is_not_fatal(mocker, hass):
     )
     discovery = TuyaLocalDiscovery(mocker.AsyncMock())
     await discovery.async_request_devices()
+
+
+@pytest.mark.parametrize(
+    "network,expected",
+    [
+        ("192.168.3.11", ["192.168.3.11"]),
+        ("192.168.3.255", ["192.168.3.255"]),
+        ("192.168.3.0/30", ["192.168.3.1", "192.168.3.2"]),
+        # Too large to probe one address at a time.
+        ("10.0.0.0/8", []),
+        # Not addresses at all.
+        ("not an address", []),
+        ("fd00::/64", []),
+    ],
+)
+def test_probe_network_expansion(network, expected):
+    """Configured networks are expanded to the addresses to be probed."""
+    assert expand_probe_network(network) == expected
+
+
+def test_probe_request_asks_for_reply_to_us():
+    """Devices reply to the address in the request, not to its sender."""
+    request = build_probe_request("192.168.0.7")
+    assert json.loads(tinytuya.decrypt_udp(request)) == {
+        "from": "app",
+        "ip": "192.168.0.7",
+    }
+
+
+@pytest.mark.asyncio
+async def test_configured_networks_are_probed_by_address(mocker, hass):
+    """Devices on a VLAN cannot hear broadcasts, so they are probed directly."""
+    mocker.patch("custom_components.tuya_local.discovery.send_discovery_request")
+    probes = mocker.patch("custom_components.tuya_local.discovery.send_unicast_probes")
+    discovery = TuyaLocalDiscovery(
+        mocker.AsyncMock(),
+        ["192.168.3.0/30", "192.168.5.11"],
+    )
+    await discovery.async_request_devices()
+
+    probes.assert_called_once_with(
+        ["192.168.3.1", "192.168.3.2", "192.168.5.11"],
+    )
+
+
+@pytest.mark.asyncio
+async def test_no_probing_without_configured_networks(mocker, hass):
+    """Nothing is sent by address unless networks have been configured."""
+    mocker.patch("custom_components.tuya_local.discovery.send_discovery_request")
+    probes = mocker.patch("custom_components.tuya_local.discovery.send_unicast_probes")
+    discovery = TuyaLocalDiscovery(mocker.AsyncMock())
+    await discovery.async_request_devices()
+
+    probes.assert_not_called()
 
 
 @pytest.mark.asyncio

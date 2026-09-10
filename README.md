@@ -75,6 +75,21 @@ Discovery listens on UDP ports 6666, 6667 and 7000. If another application on th
 
 Protocol 3.1 to 3.4 devices announce themselves unprompted, but 3.5 devices stay silent until they are asked, so a discovery request is also broadcast when Home Assistant starts, once a minute afterwards, and whenever the automatic setup choice is used.
 
+#### Devices on another subnet or VLAN
+
+Broadcasts are not usually forwarded between subnets, so devices on a separate VLAN are never heard. Those networks can be probed by address instead, which is routed normally. List them in `configuration.yaml`:
+
+```yaml
+tuya_local:
+  discovery_networks:
+    - 192.168.3.0/24
+    - 192.168.5.11
+```
+
+Each entry may be a single address or a CIDR range, and a range is limited to 1024 addresses. Every address in the list is sent a discovery request, and devices reply directly to Home Assistant. This only finds protocol 3.5 devices, as earlier protocol versions have no way to be asked; add those manually or through the cloud assisted flow.
+
+Home Assistant also needs to be reachable from the device's network for the reply to arrive, so any firewall between the two must allow UDP port 7000 in both directions.
+
 Note that discovery only works if the devices are on the same subnet as Home Assistant, as broadcasts are not usually forwarded between subnets.
 
 Home Assistant only loads the integration once it has at least one device, so discovery begins after your first device has been added manually or through the cloud assisted flow.

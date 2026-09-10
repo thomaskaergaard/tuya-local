@@ -1,19 +1,28 @@
 """
-Passive discovery of Tuya devices on the local network.
+Discovery of Tuya devices on the local network.
 
 Tuya devices periodically broadcast a small JSON announcement over UDP.
 Listening for those broadcasts lets us find devices without scanning, and
 lets us notice when a device changes its IP address.
+
+Protocol 3.5 devices do not announce themselves, they only answer a
+discovery request, so requests are broadcast as well. Broadcasts do not
+cross subnets, so networks that hold devices Home Assistant cannot reach by
+broadcast can be probed by unicast instead.
 """
 
 import asyncio
+import ipaddress
 import json
 import logging
+import socket
 from collections.abc import Callable, Coroutine
 from dataclasses import dataclass
 from typing import Any
 
+import tinytuya
 from tinytuya import UDPPORT, UDPPORTAPP, UDPPORTS, decrypt_udp
+from tinytuya.core.udp_helper import udpkey
 from tinytuya.scanner import send_discovery_request
 
 _LOGGER = logging.getLogger(__name__)
@@ -26,6 +35,98 @@ DISCOVERY_PORTS = (UDPPORT, UDPPORTS, UDPPORTAPP)
 # devices stay silent until they are asked, so a request has to be broadcast
 # for them to be found at all.
 PROBE_INTERVAL = 60
+
+# Probing a remote network means one packet per address, so refuse to expand
+# a range large enough to make that unreasonable. /22 is 1022 addresses.
+MAX_PROBE_HOSTS = 1024
+
+
+def expand_probe_network(network: str) -> list[str]:
+    """List the addresses to probe for a configured network.
+
+    Accepts a single address, or a CIDR range in which case every host
+    address in the range is returned.
+    """
+    try:
+        parsed = ipaddress.ip_network(network, strict=False)
+    except ValueError as e:
+        _LOGGER.error("Ignoring invalid discovery network %s: %s", network, e)
+        return []
+
+    if parsed.version != 4:
+        _LOGGER.error("Ignoring discovery network %s: only IPv4 is supported", network)
+        return []
+
+    if parsed.prefixlen == parsed.max_prefixlen:
+        # A plain address, which may also be a directed broadcast address.
+        return [str(parsed.network_address)]
+
+    hosts = [str(host) for host in parsed.hosts()]
+    if len(hosts) > MAX_PROBE_HOSTS:
+        _LOGGER.error(
+            "Ignoring discovery network %s: %d addresses is more than the %d allowed",
+            network,
+            len(hosts),
+            MAX_PROBE_HOSTS,
+        )
+        return []
+    return hosts
+
+
+def _source_address_for(target: str) -> str:
+    """The local address that will be used to reach a target.
+
+    Connecting a UDP socket sends nothing, it just applies the routing table,
+    which tells us the address the device should reply to.
+    """
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+        sock.connect((target, UDPPORTAPP))
+        return sock.getsockname()[0]
+
+
+def build_probe_request(source_ip: str) -> bytes:
+    """Build a discovery request that asks for a reply to source_ip.
+
+    Devices reply to the address carried in the request rather than to the
+    address the request came from, so this has to be the address that is
+    reachable from the device's network.
+    """
+    payload = json.dumps({"from": "app", "ip": source_ip}).encode()
+    message = tinytuya.TuyaMessage(
+        0,
+        tinytuya.REQ_DEVINFO,
+        None,
+        payload,
+        0,
+        True,
+        tinytuya.PREFIX_6699_VALUE,
+        True,
+    )
+    return tinytuya.pack_message(message, hmac_key=udpkey)
+
+
+def send_unicast_probes(targets: list[str]) -> None:
+    """Send a discovery request to each address individually.
+
+    Used for networks that broadcasts do not reach, such as devices on a
+    separate VLAN. Unicast is routed normally, and so is the reply.
+    """
+    if not targets:
+        return
+    try:
+        source_ip = _source_address_for(targets[0])
+    except OSError as e:
+        _LOGGER.debug("No route to %s for discovery: %s", targets[0], e)
+        return
+
+    request = build_probe_request(source_ip)
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        for target in targets:
+            try:
+                sock.sendto(request, (target, UDPPORTAPP))
+            except OSError as e:
+                _LOGGER.debug("Could not probe %s: %s", target, e)
 
 
 @dataclass(frozen=True)
@@ -88,12 +189,21 @@ class TuyaLocalDiscovery:
     def __init__(
         self,
         on_device: Callable[[DiscoveredDevice], Coroutine[Any, Any, None]],
+        networks: list[str] | None = None,
     ) -> None:
         self._on_device = on_device
         self._transports: list[asyncio.DatagramTransport] = []
         self._seen: dict[str, DiscoveredDevice] = {}
         self._tasks: set[asyncio.Task] = set()
         self._probe_task: asyncio.Task | None = None
+        self._probe_targets: list[str] = []
+        for network in networks or []:
+            self._probe_targets.extend(expand_probe_network(network))
+        if self._probe_targets:
+            _LOGGER.debug(
+                "Discovery will also probe %d configured addresses",
+                len(self._probe_targets),
+            )
 
     @property
     def devices(self) -> dict[str, DiscoveredDevice]:
@@ -124,16 +234,25 @@ class TuyaLocalDiscovery:
         never discovered. Older devices ignore the request and keep to their
         own broadcast schedule.
         """
+        loop = asyncio.get_running_loop()
         try:
-            await asyncio.get_running_loop().run_in_executor(
-                None,
-                send_discovery_request,
-            )
+            await loop.run_in_executor(None, send_discovery_request)
         except Exception as e:
             # Broadcasting can fail on unusual network setups (no broadcast
             # capable interface, container networking). Devices that announce
             # themselves are still found, so this is not fatal.
             _LOGGER.debug("Unable to broadcast a discovery request: %s %s", type(e), e)
+
+        if not self._probe_targets:
+            return
+        try:
+            await loop.run_in_executor(
+                None,
+                send_unicast_probes,
+                self._probe_targets,
+            )
+        except Exception as e:
+            _LOGGER.debug("Unable to probe configured networks: %s %s", type(e), e)
 
     async def _async_probe_loop(self) -> None:
         """Broadcast discovery requests until discovery is stopped."""

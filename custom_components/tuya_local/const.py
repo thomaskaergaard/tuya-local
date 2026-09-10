@@ -2,6 +2,9 @@ DOMAIN = "tuya_local"
 DATA_STORE = "store"
 DATA_CLOUD_CACHE = "cloud_cache"
 DATA_DISCOVERY = "discovery"
+DATA_DISCOVERY_NETWORKS = "discovery_networks"
+
+CONF_DISCOVERY_NETWORKS = "discovery_networks"
 
 CONF_DEVICE_ID = "device_id"
 CONF_LOCAL_KEY = "local_key"

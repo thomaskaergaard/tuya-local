@@ -82,7 +82,7 @@
             "already_configured": "اس ID کے ساتھ ایک آلہ پہلے ہی شامل کیا جا چکا ہے۔",
             "not_supported": "معذرت، اس آلہ کے لیے کوئی تعاون نہیں ہے۔",
             "no_devices": "اکاؤنٹ کے لیے کوئی غیر رجسٹرڈ ڈیوائسز تلاش کرنے سے قاصر۔",
-            "no_discovered_devices": "No unconfigured devices were found on the local network. Devices only announce themselves when they are powered on and connected to the same network as Home Assistant."
+            "no_discovered_devices": "No unconfigured devices were found on the local network. Devices only answer when they are powered on and reachable from Home Assistant. Devices on another subnet or VLAN cannot be found by broadcast, so their network needs to be listed under `discovery_networks` in configuration.yaml."
         },
         "error": {
             "connection": "ان تفصیلات کے ساتھ آپ کے آلے سے منسلک ہونے سے قاصر ہے۔ یہ ایک وقفے وقفے سے جاری مسئلہ ہو سکتا ہے، یا وہ غلط ہو سکتے ہیں۔ اگر آپ نے مخصوص پروٹوکول ورژن منتخب کیا ہے، تو اس کے بجائے 'auto' آزمانے کی کوشش کریں۔",

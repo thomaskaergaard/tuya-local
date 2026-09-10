@@ -82,7 +82,7 @@
             "already_configured": "Ya se ha agregado un dispositivo con esa ID.",
             "not_supported": "Lo sentimos, no hay soporte para este dispositivo.",
             "no_devices": "No se puede encontrar ningún dispositivo no registrado para la cuenta.",
-            "no_discovered_devices": "No se han encontrado dispositivos sin configurar en la red local. Los dispositivos solo se anuncian cuando están encendidos y conectados a la misma red que Home Assistant."
+            "no_discovered_devices": "No se han encontrado dispositivos sin configurar en la red local. Los dispositivos solo responden cuando están encendidos y son accesibles desde Home Assistant. Los dispositivos en otra subred o VLAN no se pueden encontrar por difusión, por lo que su red debe indicarse en `discovery_networks` en configuration.yaml."
         },
         "error": {
             "connection": "No se puede conectar a su dispositivo con esos detalles. Podría ser un problema intermitente, o pueden ser incorrectos. Si seleccionó una versión de protocolo específica, pruebe 'auto' en su lugar.",

@@ -82,7 +82,7 @@
             "already_configured": "該ID的設備已新增。",
             "not_supported": "抱歉，不支援此設備。",
             "no_devices": "無法找到該帳戶的任何未註冊設備。",
-            "no_discovered_devices": "No unconfigured devices were found on the local network. Devices only announce themselves when they are powered on and connected to the same network as Home Assistant."
+            "no_discovered_devices": "No unconfigured devices were found on the local network. Devices only answer when they are powered on and reachable from Home Assistant. Devices on another subnet or VLAN cannot be found by broadcast, so their network needs to be listed under `discovery_networks` in configuration.yaml."
         },
         "error": {
             "connection": "無法使用這些詳細資訊連接到您的裝置。這可能是間歇性問題，或資訊不正確。如果您選擇了特定的協議版本，請改為嘗試'auto'。",

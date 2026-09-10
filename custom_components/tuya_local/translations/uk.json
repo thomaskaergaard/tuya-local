@@ -82,7 +82,7 @@
             "already_configured": "Пристрій з таким ідентифікатором уже додано.",
             "not_supported": "На жаль, цей пристрій не підтримується.",
             "no_devices": "Не вдалося знайти незареєстровані пристрої для облікового запису.",
-            "no_discovered_devices": "No unconfigured devices were found on the local network. Devices only announce themselves when they are powered on and connected to the same network as Home Assistant."
+            "no_discovered_devices": "No unconfigured devices were found on the local network. Devices only answer when they are powered on and reachable from Home Assistant. Devices on another subnet or VLAN cannot be found by broadcast, so their network needs to be listed under `discovery_networks` in configuration.yaml."
         },
         "error": {
             "connection": "Неможливо підключитися до пристрою з цими даними. Це може бути тимчасовою проблемою або вони можуть бути неправильними. Якщо ви вибрали конкретну версію протоколу, спробуйте 'auto' замість цього.",

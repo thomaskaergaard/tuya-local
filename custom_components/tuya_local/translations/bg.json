@@ -82,7 +82,7 @@
             "already_configured": "Устройството с този идентификатор вече е добавено.",
             "not_supported": "Съжаляваме, няма поддръжка за това устройство, все още",
             "no_devices": "Не могат да бъдат намерени нерегистрирани устройства за акаунта.",
-            "no_discovered_devices": "No unconfigured devices were found on the local network. Devices only announce themselves when they are powered on and connected to the same network as Home Assistant."
+            "no_discovered_devices": "No unconfigured devices were found on the local network. Devices only answer when they are powered on and reachable from Home Assistant. Devices on another subnet or VLAN cannot be found by broadcast, so their network needs to be listed under `discovery_networks` in configuration.yaml."
         },
         "error": {
             "connection": "Не може да се свърже с вашето устройство с тези данни. Възможно е да става въпрос за прекъсване или данните да са неправилни. Ако сте избрали конкретна версия на протокола, опитайте 'auto' вместо това.",

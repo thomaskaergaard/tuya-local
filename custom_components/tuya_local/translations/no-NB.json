@@ -82,7 +82,7 @@
             "already_configured": "En enhet med denne ID-en eksisterer allerede.",
             "not_supported": "Beklager, det er ingen støtte for denne enheten.",
             "no_devices": "Kan ikke finne noen uregistrerte enheter for kontoen.",
-            "no_discovered_devices": "Fant ingen ukonfigurerte enheter i det lokale nettverket. Enheter annonserer seg bare når de er slått på og koblet til samme nettverk som Home Assistant."
+            "no_discovered_devices": "Fant ingen ukonfigurerte enheter i det lokale nettverket. Enheter svarer bare når de er slått på og kan nås fra Home Assistant. Enheter i et annet subnett eller VLAN kan ikke finnes via kringkasting, så nettverket deres må oppgis under `discovery_networks` i configuration.yaml."
         },
         "error": {
             "connection": "Kunne ikke koble til enheten med de angitte detaljene. Det kan være en midlertidig feil, eller feil med detaljene angitt. Hvis du valgte en spesifikk protokollversjon, prøv 'auto' i stedet.",

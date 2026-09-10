@@ -82,7 +82,7 @@
             "already_configured": "その ID を持つデバイスはすでに構成されています。",
             "not_supported": "申し訳ございませんが、このデバイスはサポートされていません。",
             "no_devices": "アカウントに未登録のデバイスが見つかりません。",
-            "no_discovered_devices": "No unconfigured devices were found on the local network. Devices only announce themselves when they are powered on and connected to the same network as Home Assistant."
+            "no_discovered_devices": "No unconfigured devices were found on the local network. Devices only answer when they are powered on and reachable from Home Assistant. Devices on another subnet or VLAN cannot be found by broadcast, so their network needs to be listed under `discovery_networks` in configuration.yaml."
         },
         "error": {
             "connection": "このような詳細ではデバイスに接続できません。 断続的な問題である可能性もありますし、間違っている可能性もあります。特定のプロトコルバージョンを選択した場合は、代わりに「auto」を試してください。",

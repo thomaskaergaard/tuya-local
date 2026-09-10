@@ -10,10 +10,12 @@ https://github.com/codetheweb/tuyapi/issues/31.
 import logging
 from time import monotonic
 
+import voluptuous as vol
 from homeassistant.config_entries import SOURCE_INTEGRATION_DISCOVERY, ConfigEntry
 from homeassistant.const import CONF_HOST, EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import discovery_flow
 from homeassistant.helpers.entity_registry import (
     async_get as async_get_entity_registry,
@@ -26,11 +28,13 @@ from .cloud_cache import async_get_cache
 from .const import (
     CONF_DEVICE_CID,
     CONF_DEVICE_ID,
+    CONF_DISCOVERY_NETWORKS,
     CONF_LOCAL_KEY,
     CONF_POLL_ONLY,
     CONF_PROTOCOL_VERSION,
     CONF_TYPE,
     DATA_DISCOVERY,
+    DATA_DISCOVERY_NETWORKS,
     DOMAIN,
 )
 from .device import async_delete_device, get_device_id, setup_device
@@ -43,6 +47,22 @@ NOT_FOUND = "Configuration file for %s not found"
 DATA_RESYNC_ATTEMPTS = "resync_attempts"
 # Minimum time between cloud lookups for a device whose setup is failing.
 RESYNC_INTERVAL = 3600
+
+# Devices on a network that Home Assistant cannot reach by broadcast, such as
+# a separate VLAN, have to be probed by address instead.
+CONFIG_SCHEMA = vol.Schema(
+    {
+        DOMAIN: vol.Schema(
+            {
+                vol.Optional(CONF_DISCOVERY_NETWORKS, default=[]): vol.All(
+                    cv.ensure_list,
+                    [cv.string],
+                ),
+            }
+        )
+    },
+    extra=vol.ALLOW_EXTRA,
+)
 
 
 def replace_unique_ids(entity_entry, device_id, conf_file, replacements):
@@ -975,6 +995,10 @@ async def async_migrate_entry(hass, entry: ConfigEntry):
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the Tuya Local component and start local discovery."""
     hass.data.setdefault(DOMAIN, {})
+    hass.data[DOMAIN][DATA_DISCOVERY_NETWORKS] = config.get(DOMAIN, {}).get(
+        CONF_DISCOVERY_NETWORKS,
+        [],
+    )
     await async_start_discovery(hass)
     return True
 
@@ -997,7 +1021,10 @@ async def async_start_discovery(hass: HomeAssistant) -> None:
             },
         )
 
-    discovery = TuyaLocalDiscovery(_async_device_discovered)
+    discovery = TuyaLocalDiscovery(
+        _async_device_discovered,
+        hass.data[DOMAIN].get(DATA_DISCOVERY_NETWORKS),
+    )
     await discovery.async_start()
     hass.data[DOMAIN][DATA_DISCOVERY] = discovery
 

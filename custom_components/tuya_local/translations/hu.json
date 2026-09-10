@@ -82,7 +82,7 @@
             "already_configured": "Ezzel az azonosítóval már lett hozzáadva eszköz.",
             "not_supported": "Sajnálom, ez az eszköz nem támogatott.",
             "no_devices": "Nem található a fiókhoz nem regisztrált eszköz.",
-            "no_discovered_devices": "No unconfigured devices were found on the local network. Devices only announce themselves when they are powered on and connected to the same network as Home Assistant."
+            "no_discovered_devices": "No unconfigured devices were found on the local network. Devices only answer when they are powered on and reachable from Home Assistant. Devices on another subnet or VLAN cannot be found by broadcast, so their network needs to be listed under `discovery_networks` in configuration.yaml."
         },
         "error": {
             "connection": "A megadott adatokkal nem sikerült kapcsolódni az eszközhöz. Lehet ideiglenes a probléma, vagy nem megfelelőek a megadott adatok. Ha egy adott protokoll verziót választottál, próbáld meg 'auto'-ra állítani.",

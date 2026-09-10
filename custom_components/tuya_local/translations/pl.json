@@ -82,7 +82,7 @@
             "already_configured": "Urządzenie z takim ID już istnieje.",
             "not_supported": "Przepraszam, to urządzenie nie jest wspierane.",
             "no_devices": "Nie udało się znaleźć żadnych niezarejestrowanych urządzeń dla konta.",
-            "no_discovered_devices": "Nie znaleziono nieskonfigurowanych urządzeń w sieci lokalnej. Urządzenia zgłaszają się tylko wtedy, gdy są włączone i podłączone do tej samej sieci co Home Assistant."
+            "no_discovered_devices": "Nie znaleziono nieskonfigurowanych urządzeń w sieci lokalnej. Urządzenia odpowiadają tylko wtedy, gdy są włączone i osiągalne z Home Assistanta. Urządzeń w innej podsieci lub sieci VLAN nie można znaleźć przez rozgłaszanie, więc ich sieć trzeba wskazać w `discovery_networks` w pliku configuration.yaml."
         },
         "error": {
             "connection": "Nie można podłączyć się do urządzenia z tymi danymi. To może być tymczasowy problem, lub mogą być one nieprawidłowe. Jeśli wybrałeś konkretną wersję protokołu, spróbuj zamiast tego 'auto'.",
