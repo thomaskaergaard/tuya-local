@@ -68,6 +68,7 @@ The Tuya authentication token is cached so that local keys can be refreshed with
 Tuya devices announce themselves on the local network, and the integration listens for those announcements. This means:
 
 - Devices you have not added yet are offered on the Integrations page without you needing to search for them. If the local key is already known from a previous cloud login it is filled in for you, otherwise you will be asked for it.
+- The same list is available on demand through the "Automatically discover devices on the local network" setup choice, which is useful if you dismissed the discovery notification or want to add several devices in a row.
 - Devices that change IP address, for example after a DHCP lease expires, are updated automatically instead of becoming unavailable.
 
 Discovery listens on UDP ports 6666, 6667 and 7000. If another application on the same host is already using those ports, discovery is skipped and everything else continues to work as before.

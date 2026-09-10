@@ -10,6 +10,13 @@
                     "setup_mode": "設定選項:"
                 }
             },
+            "auto": {
+                "title": "Discovered devices",
+                "description": "These Tuya devices are announcing themselves on your local network and are not set up yet.\n\nIf the local key is not already known from a cloud login, you will be asked for it in the next step.\n\nShut down the mobile app before continuing, as its connections to the device will often block Tuya Local communication with it.",
+                "data": {
+                    "device_id": "Device:"
+                }
+            },
             "discovery_confirm": {
                 "title": "Add discovered device",
                 "description": "{device_name}A Tuya device was found on your network.\n\nDevice ID: `{device_id}`\nIP address: `{host}`\n\nIf the local key is not already known from a cloud login, you will be asked for it in the next step.\n\nShut down the mobile app before continuing, as its connections to the device will often block Tuya Local communication with it."
@@ -74,7 +81,8 @@
         "abort": {
             "already_configured": "該ID的設備已新增。",
             "not_supported": "抱歉，不支援此設備。",
-            "no_devices": "無法找到該帳戶的任何未註冊設備。"
+            "no_devices": "無法找到該帳戶的任何未註冊設備。",
+            "no_discovered_devices": "No unconfigured devices were found on the local network. Devices only announce themselves when they are powered on and connected to the same network as Home Assistant."
         },
         "error": {
             "connection": "無法使用這些詳細資訊連接到您的裝置。這可能是間歇性問題，或資訊不正確。如果您選擇了特定的協議版本，請改為嘗試'auto'。",
@@ -85,6 +93,7 @@
     "selector": {
         "setup_mode": {
             "options": {
+                "auto": "Automatically discover devices on the local network.",
                 "cloud": "SmartLife雲端輔助設備設定。",
                 "manual": "手動提供設備連接資訊。",
                 "cloud_fresh_login": "SmartLife雲端輔助設備設定（新登入）。"

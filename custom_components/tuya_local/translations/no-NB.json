@@ -5,9 +5,16 @@
         "step": {
             "user": {
                 "title": "Konfigurer din lokale Tuya enhet",
-                "description": "Enheter kan enten legges til manuelt eller skyassistert ved hjelp av SmartLife appen.",
+                "description": "Enheter kan oppdages automatisk i det lokale nettverket, legges til manuelt eller skyassistert ved hjelp av SmartLife-appen.",
                 "data": {
                     "setup_mode": "Oppsettvalg:"
+                }
+            },
+            "auto": {
+                "title": "Oppdagede enheter",
+                "description": "Disse Tuya-enhetene annonserer seg i det lokale nettverket ditt og er ikke satt opp ennå.\n\nHvis den lokale nøkkelen ikke allerede er kjent fra en skyinnlogging, blir du bedt om den i neste steg.\n\nAvslutt mobilappen før du fortsetter, siden tilkoblingene dens til enheten ofte blokkerer kommunikasjonen til Tuya Local.",
+                "data": {
+                    "device_id": "Enhet:"
                 }
             },
             "discovery_confirm": {
@@ -74,7 +81,8 @@
         "abort": {
             "already_configured": "En enhet med denne ID-en eksisterer allerede.",
             "not_supported": "Beklager, det er ingen støtte for denne enheten.",
-            "no_devices": "Kan ikke finne noen uregistrerte enheter for kontoen."
+            "no_devices": "Kan ikke finne noen uregistrerte enheter for kontoen.",
+            "no_discovered_devices": "Fant ingen ukonfigurerte enheter i det lokale nettverket. Enheter annonserer seg bare når de er slått på og koblet til samme nettverk som Home Assistant."
         },
         "error": {
             "connection": "Kunne ikke koble til enheten med de angitte detaljene. Det kan være en midlertidig feil, eller feil med detaljene angitt. Hvis du valgte en spesifikk protokollversjon, prøv 'auto' i stedet.",
@@ -85,6 +93,7 @@
     "selector": {
         "setup_mode": {
             "options": {
+                "auto": "Oppdag enheter automatisk i det lokale nettverket.",
                 "cloud": "SmartLife sky-assistert enhetsoppsett.",
                 "manual": "Oppgi informasjon om enhetstilkobling manuelt.",
                 "cloud_fresh_login": "SmartLife sky-assistert enhetsoppsett med ny pålogging."

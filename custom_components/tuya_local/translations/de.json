@@ -5,9 +5,16 @@
         "step": {
             "user": {
                 "title": "Konfigurieren Sie Ihr Tuya Local-Gerät",
-                "description": "Geräte können entweder manuell oder cloudgestützt mit Hilfe der SmartLife App hinzugefügt werden.",
+                "description": "Geräte können automatisch im lokalen Netzwerk gefunden, manuell hinzugefügt oder cloud-unterstützt mit Hilfe der SmartLife-App eingerichtet werden.",
                 "data": {
                     "setup_mode": "Setup-Auswahl:"
+                }
+            },
+            "auto": {
+                "title": "Gefundene Geräte",
+                "description": "Diese Tuya-Geräte melden sich in deinem lokalen Netzwerk und sind noch nicht eingerichtet.\n\nWenn der lokale Schlüssel nicht bereits durch eine Cloud-Anmeldung bekannt ist, wirst du im nächsten Schritt danach gefragt.\n\nBeende die mobile App, bevor du fortfährst, da ihre Verbindungen zum Gerät die Kommunikation von Tuya Local oft blockieren.",
+                "data": {
+                    "device_id": "Gerät:"
                 }
             },
             "discovery_confirm": {
@@ -74,7 +81,8 @@
         "abort": {
             "already_configured": "Es wurde bereits ein Gerät mit dieser ID hinzugefügt.",
             "not_supported": "Dieses Gerät wird leider nicht unterstützt.",
-            "no_devices": "Für das Konto konnten keine nicht registrierten Geräte gefunden werden."
+            "no_devices": "Für das Konto konnten keine nicht registrierten Geräte gefunden werden.",
+            "no_discovered_devices": "Es wurden keine nicht eingerichteten Geräte im lokalen Netzwerk gefunden. Geräte melden sich nur, wenn sie eingeschaltet und mit demselben Netzwerk wie Home Assistant verbunden sind."
         },
         "error": {
             "connection": "Mit diesen Angaben kann keine Verbindung zu Ihrem Gerät hergestellt werden. Es könnte sich um ein intermittierendes Problem handeln, oder die Angaben sind falsch. Wenn Sie eine bestimmte Protokollversion ausgewählt haben, versuchen Sie stattdessen 'auto'.",
@@ -85,6 +93,7 @@
     "selector": {
         "setup_mode": {
             "options": {
+                "auto": "Geräte automatisch im lokalen Netzwerk finden.",
                 "cloud": "Cloud-gestützte Geräteeinrichtung von SmartLife.",
                 "manual": "Geben Sie manuell Informationen zur Geräteverbindung an.",
                 "cloud_fresh_login": "Cloud-gestützte Geräteeinrichtung von SmartLife mit einem frischen Login."

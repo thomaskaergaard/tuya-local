@@ -5,9 +5,16 @@
         "step": {
             "user": {
                 "title": "Skonfiguruj swoje urządzenie Tuya Local",
-                "description": "Urządzenia można dodawać ręcznie lub przy pomocy chmury za pomocą aplikacji SmartLife.",
+                "description": "Urządzenia można wykryć automatycznie w sieci lokalnej, dodać ręcznie lub z pomocą chmury przy użyciu aplikacji SmartLife.",
                 "data": {
                     "setup_mode": "Wybór konfiguracji:"
+                }
+            },
+            "auto": {
+                "title": "Wykryte urządzenia",
+                "description": "Te urządzenia Tuya zgłaszają się w Twojej sieci lokalnej i nie zostały jeszcze skonfigurowane.\n\nJeśli klucz lokalny nie jest jeszcze znany z logowania do chmury, zostaniesz o niego poproszony w następnym kroku.\n\nZamknij aplikację mobilną przed kontynuowaniem, ponieważ jej połączenia z urządzeniem często blokują komunikację Tuya Local.",
+                "data": {
+                    "device_id": "Urządzenie:"
                 }
             },
             "discovery_confirm": {
@@ -74,7 +81,8 @@
         "abort": {
             "already_configured": "Urządzenie z takim ID już istnieje.",
             "not_supported": "Przepraszam, to urządzenie nie jest wspierane.",
-            "no_devices": "Nie udało się znaleźć żadnych niezarejestrowanych urządzeń dla konta."
+            "no_devices": "Nie udało się znaleźć żadnych niezarejestrowanych urządzeń dla konta.",
+            "no_discovered_devices": "Nie znaleziono nieskonfigurowanych urządzeń w sieci lokalnej. Urządzenia zgłaszają się tylko wtedy, gdy są włączone i podłączone do tej samej sieci co Home Assistant."
         },
         "error": {
             "connection": "Nie można podłączyć się do urządzenia z tymi danymi. To może być tymczasowy problem, lub mogą być one nieprawidłowe. Jeśli wybrałeś konkretną wersję protokołu, spróbuj zamiast tego 'auto'.",
@@ -85,6 +93,7 @@
     "selector": {
         "setup_mode": {
             "options": {
+                "auto": "Automatycznie wykrywaj urządzenia w sieci lokalnej.",
                 "cloud": "Konfiguracja urządzenia SmartLife wspomagana chmurą.",
                 "manual": "Ręcznie podaj informacje o połączeniu urządzenia.",
                 "cloud_fresh_login": "Konfiguracja urządzenia SmartLife wspomagana chmurą (świeże logowanie)."

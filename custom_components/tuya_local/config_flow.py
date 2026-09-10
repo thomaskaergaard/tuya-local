@@ -38,6 +38,7 @@ from .const import (
     CONF_PROTOCOL_VERSION,
     CONF_TYPE,
     CONF_USER_CODE,
+    DATA_DISCOVERY,
     DATA_STORE,
 )
 from .device import TuyaLocalDevice
@@ -50,6 +51,10 @@ DEVICE_DETAILS_URL = (
     "https://github.com/make-all/tuya-local/blob/main/DEVICE_DETAILS.md"
     "#finding-your-device-id-and-local-key"
 )
+# Tuya devices rebroadcast every few seconds, so a short wait is enough to
+# see the ones that are on the network when nothing has been heard yet.
+DISCOVERY_WAIT = 12
+DISCOVERY_POLL = 0.5
 
 
 class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
@@ -147,6 +152,8 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             mode = user_input.get("setup_mode")
+            if mode == "auto":
+                return await self.async_step_auto()
             if mode == "cloud" or mode == "cloud_fresh_login":
                 await self.async_init_cloud()
                 try:
@@ -169,7 +176,7 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
         fields: OrderedDict[vol.Marker, Any] = OrderedDict()
         fields[vol.Required("setup_mode")] = SelectSelector(
             SelectSelectorConfig(
-                options=["cloud", "manual", "cloud_fresh_login"],
+                options=["auto", "cloud", "manual", "cloud_fresh_login"],
                 mode=SelectSelectorMode.LIST,
                 translation_key="setup_mode",
             )
@@ -181,6 +188,99 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
             errors=errors or {},
             last_step=False,
         )
+
+    async def _async_discovered_devices(self) -> dict[str, Any]:
+        """Return devices heard on the local network that are not set up yet.
+
+        Discovery normally runs for the lifetime of the integration, but it
+        may have only just started, in which case nothing has been heard yet.
+        Devices rebroadcast every few seconds, so wait briefly for the first
+        announcements rather than showing an empty list.
+        """
+        # Imported here so that patching it also affects this flow.
+        from . import async_start_discovery
+
+        await async_start_discovery(self.hass)
+        discovery = self.hass.data.get(DOMAIN, {}).get(DATA_DISCOVERY)
+        if discovery is None:
+            return {}
+
+        configured = {
+            entry.data.get(CONF_DEVICE_ID) for entry in self._async_current_entries()
+        }
+
+        waited = 0.0
+        while True:
+            found = {
+                device_id: device
+                for device_id, device in discovery.devices.items()
+                if device_id not in configured
+            }
+            if found or waited >= DISCOVERY_WAIT:
+                return found
+            await asyncio.sleep(DISCOVERY_POLL)
+            waited += DISCOVERY_POLL
+
+    async def async_step_auto(self, user_input=None):
+        """Pick from the devices that announced themselves on the network."""
+        devices = await self._async_discovered_devices()
+
+        if user_input is not None:
+            device = devices.get(user_input[CONF_DEVICE_ID])
+            if device is None:
+                # It was in the list when the form was shown, so it can only
+                # have disappeared by being configured in a parallel flow.
+                return self.async_abort(reason="already_configured")
+
+            await self.async_set_unique_id(device.device_id)
+            self._abort_if_unique_id_configured()
+
+            cache = await async_get_cache(self.hass)
+            cached = cache.get_device(device.device_id) or {}
+            self.__cloud_device = {
+                "id": device.device_id,
+                "ip": device.ip,
+                CONF_LOCAL_KEY: cached.get(CONF_LOCAL_KEY, ""),
+                "name": cached.get("name"),
+                "product_name": cached.get("product_name"),
+                "product_id": cached.get("product_id"),
+                "local_product_id": device.product_id,
+                "version": device.version,
+            }
+            return await self.async_step_local()
+
+        if not devices:
+            return self.async_abort(reason="no_discovered_devices")
+
+        cache = await async_get_cache(self.hass)
+        device_list = [
+            SelectOptionDict(
+                value=device_id,
+                label=self._discovered_device_label(
+                    device, cache.get_device(device_id)
+                ),
+            )
+            for device_id, device in sorted(devices.items())
+        ]
+
+        fields: OrderedDict[vol.Marker, Any] = OrderedDict()
+        fields[vol.Required(CONF_DEVICE_ID)] = SelectSelector(
+            SelectSelectorConfig(options=device_list, mode=SelectSelectorMode.DROPDOWN)
+        )
+
+        return self.async_show_form(
+            step_id="auto",
+            data_schema=vol.Schema(fields),
+            errors={},
+            last_step=False,
+        )
+
+    @staticmethod
+    def _discovered_device_label(device, cached) -> str:
+        """Describe a discovered device as helpfully as the cache allows."""
+        cached = cached or {}
+        name = cached.get("name") or cached.get("product_name") or device.device_id
+        return f"{name} ({device.ip})"
 
     async def async_step_cloud(
         self, user_input: dict[str, Any] | None = None

@@ -13,6 +13,7 @@ from custom_components.tuya_local import (
     config_flow,
     get_device_unique_id,
 )
+from custom_components.tuya_local.cloud_cache import async_get_cache
 from custom_components.tuya_local.const import (
     CONF_DEVICE_CID,
     CONF_DEVICE_ID,
@@ -20,8 +21,10 @@ from custom_components.tuya_local.const import (
     CONF_POLL_ONLY,
     CONF_PROTOCOL_VERSION,
     CONF_TYPE,
+    DATA_DISCOVERY,
     DOMAIN,
 )
+from custom_components.tuya_local.discovery import DiscoveredDevice
 
 # Designed to contain "special" characters that users constantly suspect.
 TESTKEY = ")<jO<@)'P1|kR$Kd"
@@ -628,6 +631,128 @@ async def test_flow_choose_entities_creates_config_entry(hass, bypass_setup, moc
         },
     }
     assert expected == result
+
+
+@pytest.fixture
+def fake_discovery(hass, mocker):
+    """Provide a discovery instance with a controllable device list."""
+
+    class FakeDiscovery:
+        def __init__(self):
+            self.devices = {}
+
+    discovery = FakeDiscovery()
+    hass.data.setdefault(DOMAIN, {})[DATA_DISCOVERY] = discovery
+    mocker.patch("custom_components.tuya_local.async_start_discovery")
+    return discovery
+
+
+@pytest.mark.asyncio
+async def test_flow_auto_lists_discovered_devices(hass, fake_discovery, mocker):
+    """Discovered devices that are not set up yet are offered for selection."""
+    fake_discovery.devices = {
+        "deviceid": DiscoveredDevice(
+            device_id="deviceid",
+            ip="10.0.0.5",
+            product_id="prodid",
+            version="3.3",
+        ),
+    }
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": "user"},
+        data={"setup_mode": "auto"},
+    )
+    assert result["type"] == FlowResultType.FORM
+    assert result["step_id"] == "auto"
+    options = result["data_schema"].schema[CONF_DEVICE_ID].config["options"]
+    assert options == [{"value": "deviceid", "label": "deviceid (10.0.0.5)"}]
+
+
+@pytest.mark.asyncio
+async def test_flow_auto_aborts_when_nothing_found(hass, fake_discovery, mocker):
+    """Aborting is clearer than showing an empty list."""
+    mocker.patch.object(config_flow, "DISCOVERY_WAIT", 0)
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": "user"},
+        data={"setup_mode": "auto"},
+    )
+    assert result["type"] == FlowResultType.ABORT
+    assert result["reason"] == "no_discovered_devices"
+
+
+@pytest.mark.asyncio
+async def test_flow_auto_skips_configured_devices(hass, fake_discovery, mocker):
+    """A device that is already set up should not be offered again."""
+    mocker.patch.object(config_flow, "DISCOVERY_WAIT", 0)
+    MockConfigEntry(
+        domain=DOMAIN,
+        version=13,
+        unique_id="deviceid",
+        data={
+            CONF_DEVICE_ID: "deviceid",
+            CONF_HOST: "10.0.0.5",
+            CONF_LOCAL_KEY: TESTKEY,
+            CONF_TYPE: "kogan_kahtp_heater",
+        },
+    ).add_to_hass(hass)
+    fake_discovery.devices = {
+        "deviceid": DiscoveredDevice(device_id="deviceid", ip="10.0.0.5"),
+    }
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": "user"},
+        data={"setup_mode": "auto"},
+    )
+    assert result["type"] == FlowResultType.ABORT
+    assert result["reason"] == "no_discovered_devices"
+
+
+@pytest.mark.asyncio
+async def test_flow_auto_prefills_local_step(hass, fake_discovery, mocker):
+    """Selecting a device carries its address and cached key into the next step."""
+    fake_discovery.devices = {
+        "deviceid": DiscoveredDevice(
+            device_id="deviceid",
+            ip="10.0.0.5",
+            product_id="prodid",
+            version="3.3",
+        ),
+    }
+    cache = await async_get_cache(hass)
+    await cache.async_update_devices(
+        {
+            "deviceid": {
+                "id": "deviceid",
+                CONF_LOCAL_KEY: TESTKEY,
+                "name": "Test light",
+                "product_name": "Bulb",
+            }
+        }
+    )
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": "user"},
+        data={"setup_mode": "auto"},
+    )
+    options = result["data_schema"].schema[CONF_DEVICE_ID].config["options"]
+    assert options == [{"value": "deviceid", "label": "Test light (10.0.0.5)"}]
+
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {CONF_DEVICE_ID: "deviceid"},
+    )
+    assert result["step_id"] == "local"
+    defaults = {
+        marker.schema: marker.default()
+        for marker in result["data_schema"].schema
+        if callable(marker.default)
+    }
+    assert defaults[CONF_DEVICE_ID] == "deviceid"
+    assert defaults[CONF_HOST] == "10.0.0.5"
+    assert defaults[CONF_LOCAL_KEY] == TESTKEY
+    assert defaults[CONF_PROTOCOL_VERSION] == "3.3"
 
 
 @pytest.mark.asyncio

@@ -5,9 +5,16 @@
         "step": {
             "user": {
                 "title": "Configure o seu dispositivo Tuya Local",
-                "description": "Os dispositivos podem ser adicionados manualmente ou assistidos pela Tuya Cloud com a ajuda do aplicativo SmartLife.",
+                "description": "Os dispositivos podem ser descobertos automaticamente na sua rede local, adicionados manualmente ou com auxílio da nuvem através da aplicação SmartLife.",
                 "data": {
                     "setup_mode": "Escolha de configuração:"
+                }
+            },
+            "auto": {
+                "title": "Dispositivos descobertos",
+                "description": "Estes dispositivos Tuya estão a anunciar-se na sua rede local e ainda não foram configurados.\n\nSe a chave local ainda não for conhecida através de um início de sessão na nuvem, será pedida no passo seguinte.\n\nFeche a aplicação móvel antes de continuar, pois as suas ligações ao dispositivo bloqueiam frequentemente a comunicação do Tuya Local.",
+                "data": {
+                    "device_id": "Dispositivo:"
                 }
             },
             "discovery_confirm": {
@@ -74,7 +81,8 @@
         "abort": {
             "already_configured": "Um dispositivo com esse ID já foi adicionado.",
             "not_supported": "Desculpe, não há suporte para este dispositivo.",
-            "no_devices": "Não foi possível encontrar nenhum dispositivo ainda não registado para a conta."
+            "no_devices": "Não foi possível encontrar nenhum dispositivo ainda não registado para a conta.",
+            "no_discovered_devices": "Não foram encontrados dispositivos por configurar na rede local. Os dispositivos só se anunciam quando estão ligados e na mesma rede que o Home Assistant."
         },
         "error": {
             "connection": "Não foi possível conectar ao seu dispositivo com esses detalhes. Pode ser um problema intermitente ou eles podem estar incorretos. Se você selecionou uma versão de protocolo específica, tente 'auto' em vez disso.",
@@ -85,6 +93,7 @@
     "selector": {
         "setup_mode": {
             "options": {
+                "auto": "Descobrir dispositivos automaticamente na rede local.",
                 "cloud": "Configuração do dispositivo assistido pela Cloud SmartLife.",
                 "manual": "Forneça manualmente informações de conexão do dispositivo.",
                 "cloud_fresh_login": "Configuração do dispositivo assistido pela Cloud SmartLife com login fresco."

@@ -5,9 +5,16 @@
         "step": {
             "user": {
                 "title": "Konfigurera din Tuya Local-enhet",
-                "description": "Enheter kan antingen läggas till manuellt eller cloud-assisterat med hjälp av SmartLife-appen.",
+                "description": "Enheter kan upptäckas automatiskt i ditt lokala nätverk, läggas till manuellt eller molnassisterat med hjälp av SmartLife-appen.",
                 "data": {
                     "setup_mode": "Installationsval:"
+                }
+            },
+            "auto": {
+                "title": "Upptäckta enheter",
+                "description": "Dessa Tuya-enheter annonserar sig i ditt lokala nätverk och är inte konfigurerade ännu.\n\nOm den lokala nyckeln inte redan är känd från en molninloggning kommer du att tillfrågas om den i nästa steg.\n\nStäng mobilappen innan du fortsätter, eftersom dess anslutningar till enheten ofta blockerar Tuya Locals kommunikation med den.",
+                "data": {
+                    "device_id": "Enhet:"
                 }
             },
             "discovery_confirm": {
@@ -74,7 +81,8 @@
         "abort": {
             "already_configured": "En enhet med det ID:t har redan lagts till.",
             "not_supported": "Tyvärr finns det inget stöd för denna enhet.",
-            "no_devices": "Kan inte hitta några oregistrerade enheter för kontot."
+            "no_devices": "Kan inte hitta några oregistrerade enheter för kontot.",
+            "no_discovered_devices": "Inga okonfigurerade enheter hittades i det lokala nätverket. Enheter annonserar sig bara när de är påslagna och anslutna till samma nätverk som Home Assistant."
         },
         "error": {
             "connection": "Kan inte ansluta till din enhet med dessa uppgifter. Det kan vara ett intermittent problem, eller så kan de vara felaktiga. Om du valde en specifik protokollversion, prova 'auto' istället.",
@@ -85,6 +93,7 @@
     "selector": {
         "setup_mode": {
             "options": {
+                "auto": "Upptäck enheter automatiskt i det lokala nätverket.",
                 "cloud": "SmartLife cloud-assisterad enhetskonfiguration.",
                 "manual": "Ange enhetsanslutningsinformation manuellt.",
                 "cloud_fresh_login": "SmartLife cloud-assisterad enhetskonfiguration med ny inloggning."
