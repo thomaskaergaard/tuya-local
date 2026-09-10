@@ -16,6 +16,7 @@ import ipaddress
 import json
 import logging
 import socket
+import time
 from collections.abc import Callable, Coroutine
 from dataclasses import dataclass
 from typing import Any
@@ -55,6 +56,9 @@ IDENTIFY_TIMEOUT = 3
 # How long a single scan may spend working out which device is at which
 # address, after which the rest are reported as unidentified.
 IDENTIFY_BUDGET = 60
+# Each address is checked in its own thread, so a network full of devices is
+# worked through in parallel rather than one at a time.
+IDENTIFY_CONCURRENCY = 8
 # Scanning is far more work than a broadcast, so it runs much less often.
 SCAN_INTERVAL = 300
 
@@ -225,14 +229,28 @@ async def async_find_tuya_hosts(
     return [host for host in found if host]
 
 
-def identify_host(host: str, keys: dict[str, str]) -> DiscoveredDevice | None:
+def identify_host(
+    host: str,
+    keys: dict[str, str],
+    budget: float = IDENTIFY_BUDGET,
+) -> DiscoveredDevice | None:
     """Work out which device is at an address, using known local keys.
 
     A device only identifies itself to someone who already holds its key, so
     this can only name devices that have been seen in the cloud account.
+
+    Every key has to be tried against every protocol version, so the cheap
+    versions are tried against all of the keys before the expensive ones,
+    and the whole search is abandoned once it has taken too long. Otherwise
+    an account with many devices would leave the user waiting for minutes.
     """
-    for device_id, local_key in keys.items():
-        for version in IDENTIFY_VERSIONS:
+    deadline = time.monotonic() + budget
+    for version in IDENTIFY_VERSIONS:
+        for device_id, local_key in keys.items():
+            if time.monotonic() >= deadline:
+                _LOGGER.debug("Gave up identifying %s after %ss", host, budget)
+                return None
+            started = time.monotonic()
             try:
                 device = tinytuya.Device(
                     device_id,
@@ -241,16 +259,26 @@ def identify_host(host: str, keys: dict[str, str]) -> DiscoveredDevice | None:
                     version=version,
                 )
                 device.set_socketTimeout(IDENTIFY_TIMEOUT)
+                # A wrong key is a rejection, not a glitch worth retrying,
+                # and retries are what make this slow enough to matter.
+                device.set_socketRetryLimit(1)
+                device.set_socketRetryDelay(0)
                 status = device.status()
             except Exception as e:
                 _LOGGER.debug("Error identifying %s as %s: %s", host, device_id, e)
-                continue
+                status = None
             if isinstance(status, dict) and "dps" in status:
                 return DiscoveredDevice(
                     device_id=device_id,
                     ip=host,
                     version=str(version),
                 )
+            if time.monotonic() - started >= IDENTIFY_TIMEOUT:
+                # Silence is the device not speaking this version at all,
+                # rather than a comment on the key, so trying the remaining
+                # keys would only repeat the same wait many times over.
+                _LOGGER.debug("%s does not answer protocol %s", host, version)
+                break
     return None
 
 
@@ -371,14 +399,27 @@ class TuyaLocalDiscovery:
 
         _LOGGER.debug("Found %d devices on configured networks", len(hosts))
         keys = self._key_lookup() if self._key_lookup else {}
-        loop = asyncio.get_running_loop()
-        deadline = loop.time() + IDENTIFY_BUDGET
-        unidentified = []
+        if not keys:
+            # Nothing can be named without keys, so report the bare
+            # addresses rather than spending time proving it.
+            self._unidentified = hosts
+            return
 
-        for host in hosts:
-            device = None
-            if keys and loop.time() < deadline:
-                device = await loop.run_in_executor(None, identify_host, host, keys)
+        loop = asyncio.get_running_loop()
+        semaphore = asyncio.Semaphore(IDENTIFY_CONCURRENCY)
+
+        async def identify(host: str) -> tuple[str, DiscoveredDevice | None]:
+            async with semaphore:
+                return host, await loop.run_in_executor(
+                    None,
+                    identify_host,
+                    host,
+                    keys,
+                    IDENTIFY_BUDGET,
+                )
+
+        unidentified = []
+        for host, device in await asyncio.gather(*(identify(host) for host in hosts)):
             if device is None:
                 unidentified.append(host)
             else:
@@ -397,13 +438,20 @@ class TuyaLocalDiscovery:
 
         hosts = await async_find_tuya_hosts(self._probe_targets)
         loop = asyncio.get_running_loop()
-        for host in hosts:
-            device = await loop.run_in_executor(
-                None,
-                identify_host,
-                host,
-                {device_id: local_key},
-            )
+        semaphore = asyncio.Semaphore(IDENTIFY_CONCURRENCY)
+        keys = {device_id: local_key}
+
+        async def identify(host: str) -> DiscoveredDevice | None:
+            async with semaphore:
+                return await loop.run_in_executor(
+                    None,
+                    identify_host,
+                    host,
+                    keys,
+                    IDENTIFY_BUDGET,
+                )
+
+        for device in await asyncio.gather(*(identify(host) for host in hosts)):
             if device is not None:
                 self._record(device)
                 return device

@@ -90,7 +90,7 @@ tuya_local:
 
 Each entry may be a single address or a CIDR range, and a range is limited to 1024 addresses. A whole `/24` takes about ten seconds to search. It is searched when the automatic setup choice is used, and every five minutes in the background so that devices which change address are repaired.
 
-A device only identifies itself to someone who already holds its local key, so devices found this way are named once you have logged in to the cloud, and are otherwise offered as "Unknown device" with just their address, leaving you to fill in the device id and local key. The cloud assisted flow also searches these networks, so choosing a device from your Tuya account will find it on another VLAN without you needing to know its address.
+A device only identifies itself to someone who already holds its local key, so devices found this way are named once you have logged in to the cloud, and are otherwise offered as "Unknown device" with just their address. Choosing an unknown device asks you to sign in to your Tuya account, and the keys from the account are then tried against that address, so the device id, local key and protocol version are filled in for you. Only if nothing in the account answers do you have to enter them by hand. The cloud assisted flow also searches these networks, so choosing a device from your Tuya account will find it on another VLAN without you needing to know its address.
 
 Note that discovery only works if the devices are on the same subnet as Home Assistant, as broadcasts are not usually forwarded between subnets.
 

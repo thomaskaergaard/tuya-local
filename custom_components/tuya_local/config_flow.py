@@ -70,6 +70,7 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
     __cloud_devices: dict[str, Any] = {}
     __cloud_device: dict[str, Any] | None = None
     __unidentified: list[str] = []
+    __pending_host: str | None = None
 
     def __init__(self) -> None:
         """Initialize the config flow."""
@@ -244,14 +245,10 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             choice = user_input[CONF_DEVICE_ID]
             if choice.startswith(UNIDENTIFIED_PREFIX):
-                # A device answered on its own port but we hold no key that
-                # identifies it, so only its address is known.
-                self.__cloud_device = {
-                    "id": "",
-                    "ip": choice[len(UNIDENTIFIED_PREFIX) :],
-                    CONF_LOCAL_KEY: "",
-                }
-                return await self.async_step_local()
+                # The device answered on its own port but no key we hold
+                # identifies it, so ask the cloud account who it is.
+                self.__pending_host = choice[len(UNIDENTIFIED_PREFIX) :]
+                return await self.async_step_identify()
 
             device = devices.get(choice)
             if device is None:
@@ -315,6 +312,70 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
         cached = cached or {}
         name = cached.get("name") or cached.get("product_name") or device.device_id
         return f"{name} ({device.ip})"
+
+    async def async_step_identify(self, user_input=None):
+        """Work out which device is at an address found by scanning.
+
+        Scanning finds devices by connecting to them, but a device only
+        tells its identity to someone who already holds its local key. The
+        cloud account supplies those keys, so signing in lets the device be
+        named and set up without anything being typed in by hand.
+        """
+        await self.async_init_cloud()
+        if not self.cloud.is_authenticated:
+            # The login lands back here, because a host is pending.
+            return await self.async_step_cloud()
+
+        if not self.__cloud_devices:
+            try:
+                self.__cloud_devices = await self.cloud.async_get_devices()
+            except Exception as e:
+                _LOGGER.warning("Could not fetch devices from the cloud: %s", e)
+
+        return await self._async_identified_device()
+
+    async def _async_identified_device(self):
+        """Match the pending address against the keys of the cloud account."""
+        host = self.__pending_host
+        self.__pending_host = None
+
+        keys = {
+            device["id"]: device[CONF_LOCAL_KEY]
+            for device in self.__cloud_devices.values()
+            if device.get("id") and device.get(CONF_LOCAL_KEY)
+        }
+        found = None
+        if keys:
+            # Imported here so that patching it also affects this flow.
+            from .discovery import identify_host
+
+            found = await self.hass.async_add_executor_job(identify_host, host, keys)
+
+        if found is None:
+            _LOGGER.debug("No account device answered to %s", host)
+            self.__cloud_device = {"id": "", "ip": host, CONF_LOCAL_KEY: ""}
+            return await self.async_step_local()
+
+        _LOGGER.debug("Identified %s as %s", host, found.device_id)
+        await self.async_set_unique_id(found.device_id)
+        self._abort_if_unique_id_configured()
+
+        matched = next(
+            (
+                device
+                for device in self.__cloud_devices.values()
+                if device.get("id") == found.device_id
+            ),
+            {},
+        )
+        self.__cloud_device = {
+            **matched,
+            "id": found.device_id,
+            "ip": found.ip,
+            CONF_LOCAL_KEY: keys[found.device_id],
+            "version": found.version,
+        }
+        return await self.async_step_local()
 
     async def async_step_cloud(
         self, user_input: dict[str, Any] | None = None
@@ -395,6 +456,10 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
             )
 
         self.__cloud_devices = await self.cloud.async_get_devices()
+
+        if self.__pending_host:
+            # The login was only needed to name a device found by scanning.
+            return await self._async_identified_device()
 
         return await self.async_step_choose_device()
 

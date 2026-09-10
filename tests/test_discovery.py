@@ -342,6 +342,84 @@ def test_identify_host_gives_up_when_no_key_works(mocker):
     assert identify_host("192.168.3.11", {"id": "key"}) is None
 
 
+def test_identify_host_tries_cheap_versions_across_all_keys_first(mocker):
+    """The version that rejects a wrong key slowest is left until last."""
+    tried = []
+
+    def make_device(device_id, host, local_key, version):
+        tried.append((device_id, version))
+        device = mocker.MagicMock()
+        device.status.return_value = {"Error": "Check device key or version"}
+        return device
+
+    mocker.patch(
+        "custom_components.tuya_local.discovery.tinytuya.Device",
+        side_effect=make_device,
+    )
+    identify_host("192.168.3.11", {"a": "keya", "b": "keyb"})
+
+    assert tried == [
+        ("a", 3.3),
+        ("b", 3.3),
+        ("a", 3.4),
+        ("b", 3.4),
+        ("a", 3.1),
+        ("b", 3.1),
+        ("a", 3.5),
+        ("b", 3.5),
+    ]
+
+
+def test_identify_host_stops_when_the_budget_runs_out(mocker):
+    """A large account must not leave the user waiting indefinitely."""
+    device = mocker.MagicMock()
+    device.status.return_value = {"Error": "Check device key or version"}
+    made = mocker.patch(
+        "custom_components.tuya_local.discovery.tinytuya.Device",
+        return_value=device,
+    )
+    assert identify_host("192.168.3.11", {"id": "key"}, budget=0) is None
+    made.assert_not_called()
+
+
+def test_identify_host_abandons_a_version_that_does_not_answer(mocker):
+    """Silence is about the protocol, so the other keys would only wait too."""
+    tried = []
+
+    def make_device(device_id, host, local_key, version):
+        tried.append((device_id, version))
+        device = mocker.MagicMock()
+        device.status.return_value = {"Error": "Network Error"}
+        return device
+
+    mocker.patch(
+        "custom_components.tuya_local.discovery.tinytuya.Device",
+        side_effect=make_device,
+    )
+    # Every attempt now looks like it ran out of time.
+    mocker.patch("custom_components.tuya_local.discovery.IDENTIFY_TIMEOUT", 0)
+    assert identify_host("192.168.3.11", {"a": "keya", "b": "keyb"}) is None
+
+    assert tried == [("a", 3.3), ("a", 3.4), ("a", 3.1), ("a", 3.5)]
+
+
+@pytest.mark.asyncio
+async def test_scan_without_keys_reports_every_host(mocker, hass):
+    """Nothing can be named before a cloud login, so do not try."""
+    mocker.patch(
+        "custom_components.tuya_local.discovery.async_find_tuya_hosts",
+        return_value=["192.168.3.11", "192.168.3.12"],
+    )
+    identify = mocker.patch(
+        "custom_components.tuya_local.discovery.identify_host",
+    )
+    discovery = TuyaLocalDiscovery(mocker.AsyncMock(), ["192.168.3.0/30"])
+    await discovery.async_scan_networks()
+
+    identify.assert_not_called()
+    assert discovery.unidentified == ["192.168.3.11", "192.168.3.12"]
+
+
 @pytest.mark.asyncio
 async def test_scan_reports_devices_it_cannot_name(mocker, hass):
     """Devices found without a matching key are offered by address."""
@@ -351,7 +429,7 @@ async def test_scan_reports_devices_it_cannot_name(mocker, hass):
     )
     mocker.patch(
         "custom_components.tuya_local.discovery.identify_host",
-        side_effect=lambda host, keys: (
+        side_effect=lambda host, keys, budget=None: (
             DiscoveredDevice(device_id=DEVICE_ID, ip=host, version="3.4")
             if host == "192.168.3.11"
             else None
@@ -379,7 +457,7 @@ async def test_locate_device_finds_one_known_device(mocker, hass):
     )
     mocker.patch(
         "custom_components.tuya_local.discovery.identify_host",
-        side_effect=lambda host, keys: (
+        side_effect=lambda host, keys, budget=None: (
             DiscoveredDevice(device_id=DEVICE_ID, ip=host, version="3.5")
             if host == "192.168.3.12"
             else None

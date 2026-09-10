@@ -12,14 +12,14 @@
             },
             "auto": {
                 "title": "Appareils découverts",
-                "description": "Ces appareils Tuya se signalent sur votre réseau local et ne sont pas encore configurés.\n\nSi la clé locale n'est pas déjà connue grâce à une connexion au cloud, elle vous sera demandée à l'étape suivante.\n\nFermez l'application mobile avant de continuer, car ses connexions à l'appareil bloquent souvent la communication de Tuya Local.",
+                "description": "Ces appareils Tuya se signalent sur votre réseau local et ne sont pas encore configurés.\n\nLes appareils affichés comme \"Unknown device\" ont répondu sur leur propre port, mais un appareil ne révèle son identité qu'à celui qui possède déjà sa clé locale. En choisir un vous demandera de vous connecter à votre compte Tuya, qui fournit la clé et remplit le reste automatiquement.\n\nFermez l'application mobile avant de continuer, car ses connexions à l'appareil bloquent souvent la communication de Tuya Local.",
                 "data": {
                     "device_id": "Appareil :"
                 }
             },
             "discovery_confirm": {
                 "title": "Ajouter l'appareil découvert",
-                "description": "{device_name}Un appareil Tuya a été trouvé sur votre réseau.\n\nIdentifiant de l'appareil : `{device_id}`\nAdresse IP : `{host}`\n\nSi la clé locale n'est pas déjà connue grâce à une connexion au cloud, elle vous sera demandée à l'étape suivante.\n\nFermez l'application mobile avant de continuer, car ses connexions à l'appareil bloquent souvent la communication de Tuya Local."
+                "description": "{device_name}Un appareil Tuya a été trouvé sur votre réseau.\n\nIdentifiant de l'appareil : `{device_id}`\nAdresse IP : `{host}`\n\nLes appareils affichés comme \"Unknown device\" ont répondu sur leur propre port, mais un appareil ne révèle son identité qu'à celui qui possède déjà sa clé locale. En choisir un vous demandera de vous connecter à votre compte Tuya, qui fournit la clé et remplit le reste automatiquement.\n\nFermez l'application mobile avant de continuer, car ses connexions à l'appareil bloquent souvent la communication de Tuya Local."
             },
             "cloud": {
                 "title": "Connectez-vous à Tuya",

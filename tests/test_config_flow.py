@@ -782,6 +782,62 @@ async def test_flow_auto_offers_unidentified_hosts(hass, fake_discovery, mocker)
         {"value": "host:192.168.3.11", "label": "Unknown device (192.168.3.11)"}
     ]
 
+    # Naming it needs a local key, so the account login is asked for.
+    mocker.patch.object(
+        config_flow,
+        "Cloud",
+        return_value=fake_cloud(mocker, {}, authenticated=False),
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {CONF_DEVICE_ID: "host:192.168.3.11"},
+    )
+    assert result["step_id"] == "cloud"
+
+
+def fake_cloud(mocker, devices, authenticated=True):
+    """Build a cloud interface that returns a fixed set of devices."""
+    cloud = mocker.MagicMock()
+    cloud.is_authenticated = authenticated
+    cloud.async_get_devices = mocker.AsyncMock(return_value=devices)
+    return cloud
+
+
+@pytest.mark.asyncio
+async def test_flow_auto_identifies_host_from_the_account(hass, fake_discovery, mocker):
+    """A scanned address is named by the keys of the cloud account."""
+    mocker.patch.object(config_flow, "DISCOVERY_WAIT", 0)
+    fake_discovery.unidentified = ["192.168.3.11"]
+    mocker.patch.object(
+        config_flow,
+        "Cloud",
+        return_value=fake_cloud(
+            mocker,
+            {
+                "deviceid": {
+                    "id": "deviceid",
+                    "ip": "",
+                    CONF_LOCAL_KEY: TESTKEY,
+                    "name": "Test light",
+                    "product_id": "prodid",
+                    "product_name": "Light",
+                },
+            },
+        ),
+    )
+    mocker.patch(
+        "custom_components.tuya_local.discovery.identify_host",
+        return_value=DiscoveredDevice(
+            device_id="deviceid",
+            ip="192.168.3.11",
+            version="3.4",
+        ),
+    )
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": "user"},
+        data={"setup_mode": "auto"},
+    )
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_DEVICE_ID: "host:192.168.3.11"},
@@ -792,6 +848,47 @@ async def test_flow_auto_offers_unidentified_hosts(hass, fake_discovery, mocker)
         for marker in result["data_schema"].schema
         if callable(marker.default)
     }
+    assert defaults[CONF_DEVICE_ID] == "deviceid"
+    assert defaults[CONF_HOST] == "192.168.3.11"
+    assert defaults[CONF_LOCAL_KEY] == TESTKEY
+    assert defaults[CONF_PROTOCOL_VERSION] == "3.4"
+
+
+@pytest.mark.asyncio
+async def test_flow_auto_falls_back_when_the_account_has_no_match(
+    hass, fake_discovery, mocker
+):
+    """A device outside the account still has to be filled in by hand."""
+    mocker.patch.object(config_flow, "DISCOVERY_WAIT", 0)
+    fake_discovery.unidentified = ["192.168.3.11"]
+    mocker.patch.object(
+        config_flow,
+        "Cloud",
+        return_value=fake_cloud(
+            mocker,
+            {"other": {"id": "other", CONF_LOCAL_KEY: TESTKEY}},
+        ),
+    )
+    mocker.patch(
+        "custom_components.tuya_local.discovery.identify_host",
+        return_value=None,
+    )
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": "user"},
+        data={"setup_mode": "auto"},
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {CONF_DEVICE_ID: "host:192.168.3.11"},
+    )
+    assert result["step_id"] == "local"
+    defaults = {
+        marker.schema: marker.default()
+        for marker in result["data_schema"].schema
+        if callable(marker.default)
+    }
+    assert defaults[CONF_DEVICE_ID] == ""
     assert defaults[CONF_HOST] == "192.168.3.11"
 
 

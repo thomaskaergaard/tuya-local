@@ -12,14 +12,14 @@
             },
             "auto": {
                 "title": "Dispositivos descobertos",
-                "description": "Estes dispositivos Tuya estão se anunciando na sua rede local e ainda não foram configurados.\n\nSe a chave local ainda não for conhecida por um login na nuvem, ela será solicitada na próxima etapa.\n\nFeche o aplicativo móvel antes de continuar, pois suas conexões com o dispositivo costumam bloquear a comunicação do Tuya Local.",
+                "description": "Estes dispositivos Tuya estão se anunciando na sua rede local e ainda não foram configurados.\n\nOs dispositivos listados como \"Unknown device\" responderam na própria porta, mas um dispositivo só revela sua identidade a quem já possui sua chave local. Escolher um deles pedirá que você faça login na sua conta Tuya, que fornece a chave e preenche o restante automaticamente.\n\nFeche o aplicativo móvel antes de continuar, pois suas conexões com o dispositivo costumam bloquear a comunicação do Tuya Local.",
                 "data": {
                     "device_id": "Dispositivo:"
                 }
             },
             "discovery_confirm": {
                 "title": "Adicionar dispositivo descoberto",
-                "description": "{device_name}Um dispositivo Tuya foi encontrado na sua rede.\n\nID do dispositivo: `{device_id}`\nEndereço IP: `{host}`\n\nSe a chave local ainda não for conhecida por um login na nuvem, ela será solicitada na próxima etapa.\n\nFeche o aplicativo móvel antes de continuar, pois suas conexões com o dispositivo costumam bloquear a comunicação do Tuya Local."
+                "description": "{device_name}Um dispositivo Tuya foi encontrado na sua rede.\n\nID do dispositivo: `{device_id}`\nEndereço IP: `{host}`\n\nOs dispositivos listados como \"Unknown device\" responderam na própria porta, mas um dispositivo só revela sua identidade a quem já possui sua chave local. Escolher um deles pedirá que você faça login na sua conta Tuya, que fornece a chave e preenche o restante automaticamente.\n\nFeche o aplicativo móvel antes de continuar, pois suas conexões com o dispositivo costumam bloquear a comunicação do Tuya Local."
             },
             "cloud": {
                 "title": "Faça login no Tuya",

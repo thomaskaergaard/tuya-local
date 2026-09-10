@@ -12,14 +12,14 @@
             },
             "auto": {
                 "title": "Gefundene Geräte",
-                "description": "Diese Tuya-Geräte melden sich in deinem lokalen Netzwerk und sind noch nicht eingerichtet.\n\nWenn der lokale Schlüssel nicht bereits durch eine Cloud-Anmeldung bekannt ist, wirst du im nächsten Schritt danach gefragt.\n\nBeende die mobile App, bevor du fortfährst, da ihre Verbindungen zum Gerät die Kommunikation von Tuya Local oft blockieren.",
+                "description": "Diese Tuya-Geräte melden sich in deinem lokalen Netzwerk und sind noch nicht eingerichtet.\n\nAls \"Unknown device\" aufgeführte Geräte haben auf ihrem eigenen Port geantwortet, aber ein Gerät gibt seine Identität nur an jemanden preis, der bereits seinen lokalen Schlüssel besitzt. Wenn du eines auswählst, wirst du zur Anmeldung bei deinem Tuya-Konto aufgefordert, das den Schlüssel liefert und den Rest automatisch ausfüllt.\n\nBeende die mobile App, bevor du fortfährst, da ihre Verbindungen zum Gerät die Kommunikation von Tuya Local oft blockieren.",
                 "data": {
                     "device_id": "Gerät:"
                 }
             },
             "discovery_confirm": {
                 "title": "Gefundenes Gerät hinzufügen",
-                "description": "{device_name}Ein Tuya-Gerät wurde in deinem Netzwerk gefunden.\n\nGeräte-ID: `{device_id}`\nIP-Adresse: `{host}`\n\nWenn der lokale Schlüssel nicht bereits durch eine Cloud-Anmeldung bekannt ist, wirst du im nächsten Schritt danach gefragt.\n\nBeende die mobile App, bevor du fortfährst, da ihre Verbindungen zum Gerät die Kommunikation von Tuya Local oft blockieren."
+                "description": "{device_name}Ein Tuya-Gerät wurde in deinem Netzwerk gefunden.\n\nGeräte-ID: `{device_id}`\nIP-Adresse: `{host}`\n\nAls \"Unknown device\" aufgeführte Geräte haben auf ihrem eigenen Port geantwortet, aber ein Gerät gibt seine Identität nur an jemanden preis, der bereits seinen lokalen Schlüssel besitzt. Wenn du eines auswählst, wirst du zur Anmeldung bei deinem Tuya-Konto aufgefordert, das den Schlüssel liefert und den Rest automatisch ausfüllt.\n\nBeende die mobile App, bevor du fortfährst, da ihre Verbindungen zum Gerät die Kommunikation von Tuya Local oft blockieren."
             },
             "cloud": {
                 "title": "Melden Sie sich bei Tuya an",
