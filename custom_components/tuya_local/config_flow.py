@@ -346,7 +346,12 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
             # have disappeared by being configured in a parallel flow.
             return self.async_abort(reason="already_configured")
 
-        await self.async_set_unique_id(device.device_id)
+        # Discovery keeps a flow open for every device it has heard but
+        # which is not set up yet, so an offer to add this one is normally
+        # already outstanding. Adding it here is a deliberate answer to that
+        # offer rather than a clash with it, and Home Assistant withdraws the
+        # offer once the entry exists.
+        await self.async_set_unique_id(device.device_id, raise_on_progress=False)
         self._abort_if_unique_id_configured()
 
         cache = await async_get_cache(self.hass)
@@ -476,7 +481,9 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
         self.__area_id = import_info.get(CONF_AREA_ID)
         self.__quick_add = True
 
-        await self.async_set_unique_id(self.__cloud_device["id"])
+        await self.async_set_unique_id(
+            self.__cloud_device["id"], raise_on_progress=False
+        )
         self._abort_if_unique_id_configured()
 
         result = await self.async_step_local(import_info["local"])
@@ -635,7 +642,7 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
             return await self.async_step_local()
 
         _LOGGER.debug("Identified %s as %s", host, found.device_id)
-        await self.async_set_unique_id(found.device_id)
+        await self.async_set_unique_id(found.device_id, raise_on_progress=False)
         self._abort_if_unique_id_configured()
 
         matched = next(
@@ -984,7 +991,8 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
                     if product_id:
                         self.data = {**self.data, CONF_PRODUCT_ID: product_id}
                 await self.async_set_unique_id(
-                    user_input.get(CONF_DEVICE_CID, user_input[CONF_DEVICE_ID])
+                    user_input.get(CONF_DEVICE_CID, user_input[CONF_DEVICE_ID]),
+                    raise_on_progress=False,
                 )
                 self._abort_if_unique_id_configured()
                 return await self.async_step_select_type()

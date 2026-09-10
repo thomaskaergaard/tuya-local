@@ -2,6 +2,7 @@
 
 import pytest
 import voluptuous as vol
+from homeassistant.config_entries import SOURCE_INTEGRATION_DISCOVERY
 from homeassistant.const import CONF_EMAIL, CONF_HOST, CONF_NAME, CONF_PASSWORD
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.exceptions import ConfigEntryNotReady
@@ -1834,3 +1835,71 @@ async def test_bulk_add_survives_a_device_that_raises(
     assert result["description_placeholders"]["added"] == "Lamp two"
     assert result["description_placeholders"]["skipped"] == "Lamp one"
     assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+
+
+@pytest.mark.asyncio
+async def test_adding_a_device_that_discovery_already_offered(
+    hass, bypass_setup, fake_discovery, mocker
+):
+    """Discovery leaves a flow open per device, which must not block adding it.
+
+    Every device heard on the network is offered on the Integrations page,
+    which means a flow is already in progress for it by the time the same
+    device is picked from the discovered list.
+    """
+    fake_discovery.devices = _discovered("dev1")
+    await _cache_devices(hass, {"dev1": "Lamp one"})
+    _connecting_device(mocker)
+
+    offered = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": SOURCE_INTEGRATION_DISCOVERY},
+        data={CONF_DEVICE_ID: "dev1", CONF_HOST: "10.0.0.5", "version": "3.3"},
+    )
+    assert offered["step_id"] == "discovery_confirm"
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": "user"},
+        data={"setup_mode": "auto"},
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {CONF_DEVICE_ID: ["dev1"], CONF_QUICK_ADD: True},
+    )
+
+    assert result.get("reason") is None, result.get("reason")
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+    # The offer is redundant once the device is added, so it should be gone.
+    assert hass.config_entries.flow.async_progress() == []
+
+
+@pytest.mark.asyncio
+async def test_bulk_adding_devices_that_discovery_already_offered(
+    hass, bypass_setup, fake_discovery, mocker
+):
+    """The same open flows must not empty out a bulk selection."""
+    fake_discovery.devices = _discovered("dev1", "dev2")
+    await _cache_devices(hass, {"dev1": "Lamp one", "dev2": "Lamp two"})
+    _connecting_device(mocker)
+
+    for device_id, host in (("dev1", "10.0.0.5"), ("dev2", "10.0.0.6")):
+        await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={"source": SOURCE_INTEGRATION_DISCOVERY},
+            data={CONF_DEVICE_ID: device_id, CONF_HOST: host, "version": "3.3"},
+        )
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": "user"},
+        data={"setup_mode": "auto"},
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {CONF_DEVICE_ID: ["dev1", "dev2"], CONF_QUICK_ADD: True},
+    )
+
+    assert result["reason"] == "bulk_added"
+    assert len(hass.config_entries.async_entries(DOMAIN)) == 2
+    assert hass.config_entries.flow.async_progress() == []
