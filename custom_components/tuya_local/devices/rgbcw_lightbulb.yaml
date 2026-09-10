@@ -51,6 +51,9 @@ products:
   - id: gp0gooamqaky7x7r
     manufacturer: Sunco
     model: DL_SL4_S_NL-WH-2760K
+  - id: key8u54q9dtru5jw
+    manufacturer: LEDVANCE
+    model: SMART+ WiFi Spot GU10 Multicolor
 entities:
   - entity: light
     dps:
